@@ -1,0 +1,12 @@
+---
+description: Ghost Network Auditor project rules for coding agents
+alwaysApply: true
+---
+
+Follow the rules in `AGENTS.md` at the repository root.
+
+- Stay in your lane. Ask before editing files outside it.
+- `contracts/` is the source of truth. Never change a contract without updating both sides in the same pull request.
+- Agents query data only through gateway templates. Never write free-form SQL from an agent.
+- Every claim carries receipt IDs. No receipt, no claim.
+- Secrets live only in `.env`. Never commit keys, passwords or real personal data.

@@ -1,0 +1,187 @@
+openapi: 3.0.3
+info:
+  title: Ghost Network Auditor Gateway
+  version: 0.0.1
+  description: Query templates, receipts and health for Zetaris-backed evidence.
+servers:
+  - url: http://localhost:8081
+paths:
+  /health:
+    get:
+      summary: Gateway and Zetaris health
+      operationId: getHealth
+      responses:
+        "200":
+          description: Health status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GatewayHealth"
+  /catalog:
+    get:
+      summary: Query template catalog
+      operationId: getCatalog
+      responses:
+        "501":
+          description: Not implemented
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogResponse"
+  /query:
+    post:
+      summary: Run a parameterized query template
+      operationId: runQuery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QueryRequest"
+      responses:
+        "501":
+          description: Not implemented
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueryResponse"
+  /replay/{receiptId}:
+    post:
+      summary: Replay a stored receipt
+      operationId: replayReceipt
+      parameters:
+        - name: receiptId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "501":
+          description: Not implemented
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReplayResponse"
+  /receipts/{receiptId}:
+    get:
+      summary: Fetch a stored receipt
+      operationId: getReceipt
+      parameters:
+        - name: receiptId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "501":
+          description: Not implemented
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
+components:
+  schemas:
+    GatewayHealth:
+      type: object
+      required: [zetaris, mode]
+      properties:
+        zetaris:
+          type: string
+          enum: [up, down, not_configured]
+        mode:
+          type: string
+          enum: [live, sample]
+    CatalogResponse:
+      type: object
+      required: [templates]
+      properties:
+        templates:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+      description: TODO placeholder. Catalog item shape is not in contracts yet.
+    QueryRequest:
+      type: object
+      required: [templateId, params, runId, requestedBy]
+      properties:
+        templateId:
+          type: string
+        params:
+          type: object
+          additionalProperties: true
+        runId:
+          type: string
+        requestedBy:
+          type: string
+    Receipt:
+      type: object
+      required:
+        - receiptId
+        - runId
+        - templateId
+        - sql
+        - params
+        - sources
+        - rowCount
+        - rowsHash
+        - rowsPreview
+        - executedAt
+        - mode
+        - durationMs
+      properties:
+        receiptId:
+          type: string
+        runId:
+          type: string
+        templateId:
+          type: string
+        sql:
+          type: string
+        params:
+          type: object
+          additionalProperties: true
+        sources:
+          type: array
+          items:
+            type: string
+        rowCount:
+          type: integer
+        rowsHash:
+          type: string
+        rowsPreview:
+          type: array
+        executedAt:
+          type: string
+          format: date-time
+        mode:
+          type: string
+          enum: [live, replayed]
+        durationMs:
+          type: number
+    QueryResponse:
+      type: object
+      required: [receipt, columns, rows]
+      properties:
+        receipt:
+          $ref: "#/components/schemas/Receipt"
+        columns:
+          type: array
+          items:
+            type: string
+        rows:
+          type: array
+    ReplayResponse:
+      type: object
+      required: [receiptId, match, originalRowsHash, newRowsHash, rows]
+      properties:
+        receiptId:
+          type: string
+        match:
+          type: boolean
+        originalRowsHash:
+          type: string
+        newRowsHash:
+          type: string
+        rows:
+          type: array

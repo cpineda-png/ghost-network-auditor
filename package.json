@@ -1,0 +1,17 @@
+{
+  "name": "ghost-network-auditor",
+  "private": true,
+  "workspaces": [
+    "contracts",
+    "services/agents",
+    "apps/web"
+  ],
+  "scripts": {
+    "test": "npm test --workspaces --if-present",
+    "dev": "docker compose up",
+    "verify": "bash scripts/verify.sh"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

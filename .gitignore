@@ -1,0 +1,12 @@
+node_modules/
+target/
+dist/
+.env
+.env.local
+drivers/*.jar
+traces/
+services/agents/.data/
+.idea/
+Thumbs.db
+.DS_Store
+*.log
