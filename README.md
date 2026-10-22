@@ -6,6 +6,8 @@ A multi-agent system for a health plan's provider data analyst. Agents reconcile
 
 ## Quick start in replay mode
 
+After cloning, run `npm ci` at the repo root.
+
 ```bash
 cp .env.example .env
 docker compose up --build
