@@ -8,6 +8,7 @@ RUN npm ci
 RUN npm run build -w web
 
 FROM nginx:alpine
+RUN apk add --no-cache wget
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 EXPOSE 5173

@@ -1,0 +1,78 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/sample/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  gateway:
+    build: ./services/gateway
+    ports:
+      - "8081:8081"
+    env_file: .env
+    environment:
+      SAMPLE_MODE: ${SAMPLE_MODE}
+      ZETARIS_JDBC_URL: ${ZETARIS_JDBC_URL}
+      ZETARIS_JDBC_DRIVER_CLASS: ${ZETARIS_JDBC_DRIVER_CLASS}
+      ZETARIS_USERNAME: ${ZETARIS_USERNAME}
+      ZETARIS_PASSWORD: ${ZETARIS_PASSWORD}
+    volumes:
+      - ./drivers:/drivers:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  agents:
+    build:
+      context: .
+      dockerfile: services/agents/Dockerfile
+    ports:
+      - "8080:8080"
+    env_file: .env
+    environment:
+      PORT: "8080"
+      GATEWAY_URL: http://gateway:8081
+      LLM_REPLAY: ${LLM_REPLAY}
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY}
+      NEMOTRON_PLANNER_MODEL: ${NEMOTRON_PLANNER_MODEL}
+      NEMOTRON_WORKER_MODEL: ${NEMOTRON_WORKER_MODEL}
+    depends_on:
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "5173:5173"
+    depends_on:
+      agents:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:5173/"]
+      interval: 10s
+      timeout: 5s
+      retries: 12

@@ -1,0 +1,9 @@
+.git
+.cursor
+node_modules
+**/node_modules
+**/dist
+**/target
+.env
+.env.local
+traces

@@ -11,6 +11,15 @@ cp .env.example .env
 docker compose up --build
 ```
 
+On Windows, if `docker compose up --build` fails with `Access is denied` (common when the repo is on OneDrive), build the images first, then start Compose without baking:
+
+```bash
+docker build -t ghost-network-auditor-gateway ./services/gateway
+docker build -t ghost-network-auditor-agents -f services/agents/Dockerfile .
+docker build -t ghost-network-auditor-web -f apps/web/Dockerfile .
+docker compose up -d --no-build
+```
+
 Then open http://localhost:5173. With the default `.env`, the UI shows a REPLAY badge and no NVIDIA or Zetaris keys are required.
 
 ```bash
