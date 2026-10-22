@@ -1,7 +1,5 @@
 # Sponsor tech
 
-TODO: describe how this project uses:
-
-- Zetaris (federated SQL; JDBC on the host, not in Compose)
-- Meterless H-MEM and World Model (vendored later into `services/agents/vendor`)
-- NVIDIA Nemotron models through the OpenAI-compatible NVIDIA API
+- **Zetaris** — federated SQL over JDBC on the host (port 10000), not in Compose. The gateway loads the driver at runtime from `/drivers`.
+- **Meterless** — H-MEM and World Model are vendored under `services/agents/vendor/`. Adapter mapping: [meterless-adapters.md](meterless-adapters.md).
+- **NVIDIA Nemotron** — planner and worker models through the OpenAI-compatible API at `https://integrate.api.nvidia.com/v1`.

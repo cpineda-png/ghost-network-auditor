@@ -1,3 +1,7 @@
+// Wrap vendor/hmem/reference. See docs/meterless-adapters.md.
+// Rulings: source user_correction, type factual, confidence 0.9.
+// ConflictDetection is for contradicting rulings only, not
+// directory-versus-roster. The newer ruling supersedes the older.
 export type MemoryRecord = {
   id: string;
   payload: unknown;
