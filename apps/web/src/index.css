@@ -1,0 +1,63 @@
+:root {
+  font-family: Georgia, "Times New Roman", serif;
+  color: #1b1b1b;
+  background: #f4f1ea;
+}
+
+body {
+  margin: 0;
+}
+
+main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+h1,
+h2 {
+  margin: 0;
+}
+
+.badge {
+  padding: 2px 10px;
+  border: 1px solid #1b1b1b;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+}
+
+.badge-replay {
+  background: #e7e1d3;
+}
+
+.badge-live {
+  background: #d7ead3;
+}
+
+.badge-unknown {
+  background: #eee;
+}
+
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #d4cfc4;
+  padding: 16px;
+  min-height: 140px;
+}
+
+.panel p {
+  color: #666;
+}
