@@ -1,0 +1,50 @@
+[
+  {
+    "source": "claims",
+    "field": "address",
+    "helpful": 8,
+    "notHelpful": 1,
+    "wrong": 0,
+    "score": 0.89
+  },
+  {
+    "source": "directory",
+    "field": "address",
+    "helpful": 3,
+    "notHelpful": 4,
+    "wrong": 2,
+    "score": 0.33
+  },
+  {
+    "source": "roster",
+    "field": "phone",
+    "helpful": 6,
+    "notHelpful": 1,
+    "wrong": 0,
+    "score": 0.86
+  },
+  {
+    "source": "nppes",
+    "field": "specialty",
+    "helpful": 7,
+    "notHelpful": 1,
+    "wrong": 0,
+    "score": 0.88
+  },
+  {
+    "source": "directory",
+    "field": "accepting",
+    "helpful": 2,
+    "notHelpful": 3,
+    "wrong": 1,
+    "score": 0.33
+  },
+  {
+    "source": "roster",
+    "field": "status",
+    "helpful": 5,
+    "notHelpful": 1,
+    "wrong": 1,
+    "score": 0.71
+  }
+]

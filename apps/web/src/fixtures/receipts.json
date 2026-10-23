@@ -1,0 +1,465 @@
+[
+  {
+    "receiptId": "rcpt-l1-directory",
+    "runId": "run-cold",
+    "templateId": "directory_batch",
+    "sql": "SELECT address_line, city FROM directory_listing WHERE listing_id = $listing_id",
+    "params": {
+      "listing_id": "listing:plan:L-00001"
+    },
+    "sources": [
+      "directory"
+    ],
+    "rowCount": 1,
+    "rowsHash": "hash-rcpt-l1-directory",
+    "rowsPreview": [
+      {
+        "address_line": "100 Old Mill Rd",
+        "city": "Springfield"
+      }
+    ],
+    "executedAt": "2026-04-02T14:00:00.000Z",
+    "mode": "replayed",
+    "durationMs": 40
+  },
+  {
+    "receiptId": "rcpt-l1-claims",
+    "runId": "run-cold",
+    "templateId": "claims_locations_by_npi",
+    "sql": "SELECT practice_address, city FROM claims_header WHERE listing_id = $listing_id AND service_date >= $since",
+    "params": {
+      "listing_id": "listing:plan:L-00001",
+      "since": "2025-01-01"
+    },
+    "sources": [
+      "claims"
+    ],
+    "rowCount": 6,
+    "rowsHash": "hash-rcpt-l1-claims",
+    "rowsPreview": [
+      {
+        "practice_address": "400 Harbor Ave",
+        "city": "Springfield"
+      }
+    ],
+    "executedAt": "2026-04-02T14:00:00.000Z",
+    "mode": "replayed",
+    "durationMs": 40
+  },
+  {
+    "receiptId": "rcpt-l2-directory",
+    "runId": "run-cold",
+    "templateId": "directory_batch",
+    "sql": "SELECT network_status, accepting_new_patients FROM directory_listing WHERE listing_id = $listing_id",
+    "params": {
+      "listing_id": "listing:plan:L-00002"
+    },
+    "sources": [
+      "directory"
+    ],
+    "rowCount": 1,
+    "rowsHash": "hash-rcpt-l2-directory",
+    "rowsPreview": [
+      {
+        "network_status": "active",
+        "accepting_new_patients": true
+      }
+    ],
+    "executedAt": "2026-04-02T14:00:00.000Z",
+    "mode": "replayed",
+    "durationMs": 40
+  },
+  {
+    "receiptId": "rcpt-l2-roster",
+    "runId": "run-cold",
+    "templateId": "roster_by_npi",
+    "sql": "SELECT employment_status FROM roster WHERE listing_id = $listing_id",
+    "params": {
+      "listing_id": "listing:plan:L-00002"
+    },
+    "sources": [
+      "roster"
+    ],
+    "rowCount": 1,
+    "rowsHash": "hash-rcpt-l2-roster",
+    "rowsPreview": [
+      {
+        "employment_status": "terminated"
+      }
+    ],
+    "executedAt": "2026-04-02T14:00:00.000Z",
+    "mode": "replayed",
+    "durationMs": 40
+  },
+  {
+    "receiptId": "rcpt-l2-claims",
+    "runId": "run-cold",
+    "templateId": "claims_by_npi",
+    "sql": "SELECT COUNT(*) AS claim_count FROM claims_header WHERE listing_id = $listing_id AND service_date >= $since",
+    "params": {
+      "listing_id": "listing:plan:L-00002",
+      "since": "2025-02-02"
+    },
+    "sources": [
+      "claims"
+    ],
+    "rowCount": 0,
+    "rowsHash": "hash-rcpt-l2-claims",
+    "rowsPreview": [],
+    "executedAt": "2026-04-02T14:00:00.000Z",
+    "mode": "replayed",
+    "durationMs": 40
+  },
+  {
+    "receiptId": "rcpt-l3-directory",
+    "runId": "run-cold",
+    "templateId": "directory_batch",
+    "sql": "SELECT phone FROM directory_listing WHERE listing_id = $listing_id",
+    "params": {
+      "listing_id": "listing:plan:L-00003"
+    },
+    "sources": [
+      "directory"
+    ],
+    "rowCount": 1,
+    "rowsHash": "hash-rcpt-l3-directory",
+    "rowsPreview": [
+      {
+        "phone": "555-0100"
+      }
+    ],
+    "executedAt": "2026-04-02T14:00:00.000Z",
+    "mode": "replayed",
+    "durationMs": 40
+  },
+  {
+    "receiptId": "rcpt-l3-roster",
+    "runId": "run-cold",
+    "templateId": "roster_by_npi",
+    "sql": "SELECT phone FROM roster WHERE listing_id = $listing_id",
+    "params": {
+      "listing_id": "listing:plan:L-00003"
+    },
+    "sources": [
+      "roster"
+    ],
+    "rowCount": 1,
+    "rowsHash": "hash-rcpt-l3-roster",
+    "rowsPreview": [
+      {
+        "phone": "555-0142"
+      }
+    ],
+    "executedAt": "2026-04-02T14:00:00.000Z",
+    "mode": "replayed",
+    "durationMs": 40
+  },
+  {
+    "receiptId": "rcpt-l4-directory",
+    "runId": "run-cold",
+    "templateId": "directory_batch",
+    "sql": "SELECT specialty FROM directory_listing WHERE listing_id = $listing_id",
+    "params": {
+      "listing_id": "listing:plan:L-00004"
+    },
+    "sources": [
+      "directory"
+    ],
+    "rowCount": 1,
+    "rowsHash": "hash-rcpt-l4-directory",
+    "rowsPreview": [
+      {
+        "specialty": "Cardiology"
+      }
+    ],
+    "executedAt": "2026-04-02T14:00:00.000Z",
+    "mode": "replayed",
+    "durationMs": 40
+  },
+  {
+    "receiptId": "rcpt-l4-nppes",
+    "runId": "run-cold",
+    "templateId": "nppes_individual_by_npi",
+    "sql": "SELECT taxonomy_label FROM nppes WHERE npi = $npi",
+    "params": {
+      "npi": "1234567893"
+    },
+    "sources": [
+      "nppes"
+    ],
+    "rowCount": 1,
+    "rowsHash": "hash-rcpt-l4-nppes",
+    "rowsPreview": [
+      {
+        "taxonomy_label": "Cardiovascular disease"
+      }
+    ],
+    "executedAt": "2026-04-02T14:00:00.000Z",
+    "mode": "replayed",
+    "durationMs": 40
+  },
+  {
+    "receiptId": "rcpt-l5-directory",
+    "runId": "run-cold",
+    "templateId": "directory_batch",
+    "sql": "SELECT network_status FROM directory_listing WHERE listing_id = $listing_id",
+    "params": {
+      "listing_id": "listing:plan:L-00005"
+    },
+    "sources": [
+      "directory"
+    ],
+    "rowCount": 1,
+    "rowsHash": "hash-rcpt-l5-directory",
+    "rowsPreview": [
+      {
+        "network_status": "active"
+      }
+    ],
+    "executedAt": "2026-04-02T14:00:00.000Z",
+    "mode": "replayed",
+    "durationMs": 40
+  },
+  {
+    "receiptId": "rcpt-l5-roster",
+    "runId": "run-cold",
+    "templateId": "roster_by_npi",
+    "sql": "SELECT employment_status FROM roster WHERE listing_id = $listing_id",
+    "params": {
+      "listing_id": "listing:plan:L-00005"
+    },
+    "sources": [
+      "roster"
+    ],
+    "rowCount": 1,
+    "rowsHash": "hash-rcpt-l5-roster",
+    "rowsPreview": [
+      {
+        "employment_status": "active"
+      }
+    ],
+    "executedAt": "2026-04-02T14:00:00.000Z",
+    "mode": "replayed",
+    "durationMs": 40
+  },
+  {
+    "receiptId": "rcpt-l6-directory",
+    "runId": "run-cold",
+    "templateId": "directory_batch",
+    "sql": "SELECT accepting_new_patients FROM directory_listing WHERE listing_id = $listing_id",
+    "params": {
+      "listing_id": "listing:plan:L-00006"
+    },
+    "sources": [
+      "directory"
+    ],
+    "rowCount": 1,
+    "rowsHash": "hash-rcpt-l6-directory",
+    "rowsPreview": [
+      {
+        "accepting_new_patients": true
+      }
+    ],
+    "executedAt": "2026-04-02T14:00:00.000Z",
+    "mode": "replayed",
+    "durationMs": 40
+  },
+  {
+    "receiptId": "rcpt-l6-roster",
+    "runId": "run-cold",
+    "templateId": "roster_by_npi",
+    "sql": "SELECT accepting_new_patients FROM roster WHERE listing_id = $listing_id",
+    "params": {
+      "listing_id": "listing:plan:L-00006"
+    },
+    "sources": [
+      "roster"
+    ],
+    "rowCount": 1,
+    "rowsHash": "hash-rcpt-l6-roster",
+    "rowsPreview": [
+      {
+        "accepting_new_patients": false
+      }
+    ],
+    "executedAt": "2026-04-02T14:00:00.000Z",
+    "mode": "replayed",
+    "durationMs": 40
+  },
+  {
+    "receiptId": "rcpt-l7-directory",
+    "runId": "run-cold",
+    "templateId": "directory_batch",
+    "sql": "SELECT phone FROM directory_listing WHERE listing_id = $listing_id",
+    "params": {
+      "listing_id": "listing:plan:L-00007"
+    },
+    "sources": [
+      "directory"
+    ],
+    "rowCount": 1,
+    "rowsHash": "hash-rcpt-l7-directory",
+    "rowsPreview": [
+      {
+        "phone": "555-0160"
+      }
+    ],
+    "executedAt": "2026-04-02T14:00:00.000Z",
+    "mode": "replayed",
+    "durationMs": 40
+  },
+  {
+    "receiptId": "rcpt-l7-roster",
+    "runId": "run-cold",
+    "templateId": "roster_by_npi",
+    "sql": "SELECT phone FROM roster WHERE listing_id = $listing_id",
+    "params": {
+      "listing_id": "listing:plan:L-00007"
+    },
+    "sources": [
+      "roster"
+    ],
+    "rowCount": 1,
+    "rowsHash": "hash-rcpt-l7-roster",
+    "rowsPreview": [
+      {
+        "phone": "555-0160"
+      }
+    ],
+    "executedAt": "2026-04-02T14:00:00.000Z",
+    "mode": "replayed",
+    "durationMs": 40
+  },
+  {
+    "receiptId": "rcpt-l8-directory",
+    "runId": "run-cold",
+    "templateId": "directory_batch",
+    "sql": "SELECT specialty FROM directory_listing WHERE listing_id = $listing_id",
+    "params": {
+      "listing_id": "listing:plan:L-00008"
+    },
+    "sources": [
+      "directory"
+    ],
+    "rowCount": 1,
+    "rowsHash": "hash-rcpt-l8-directory",
+    "rowsPreview": [
+      {
+        "specialty": "Psychiatry"
+      }
+    ],
+    "executedAt": "2026-04-02T14:00:00.000Z",
+    "mode": "replayed",
+    "durationMs": 40
+  },
+  {
+    "receiptId": "rcpt-l8-nppes",
+    "runId": "run-cold",
+    "templateId": "nppes_individual_by_npi",
+    "sql": "SELECT taxonomy_label FROM nppes WHERE npi = $npi",
+    "params": {
+      "npi": "1987654321"
+    },
+    "sources": [
+      "nppes"
+    ],
+    "rowCount": 1,
+    "rowsHash": "hash-rcpt-l8-nppes",
+    "rowsPreview": [
+      {
+        "taxonomy_label": "Psychiatry"
+      }
+    ],
+    "executedAt": "2026-04-02T14:00:00.000Z",
+    "mode": "replayed",
+    "durationMs": 40
+  },
+  {
+    "receiptId": "rcpt-l9-directory",
+    "runId": "run-cold",
+    "templateId": "directory_batch",
+    "sql": "SELECT network_status FROM directory_listing WHERE listing_id = $listing_id",
+    "params": {
+      "listing_id": "listing:plan:L-00009"
+    },
+    "sources": [
+      "directory"
+    ],
+    "rowCount": 1,
+    "rowsHash": "hash-rcpt-l9-directory",
+    "rowsPreview": [
+      {
+        "network_status": "active"
+      }
+    ],
+    "executedAt": "2026-04-02T14:00:00.000Z",
+    "mode": "replayed",
+    "durationMs": 40
+  },
+  {
+    "receiptId": "rcpt-l9-claims",
+    "runId": "run-cold",
+    "templateId": "claims_by_npi",
+    "sql": "SELECT panel_status FROM claims_header WHERE listing_id = $listing_id ORDER BY service_date DESC LIMIT 5",
+    "params": {
+      "listing_id": "listing:plan:L-00009"
+    },
+    "sources": [
+      "claims"
+    ],
+    "rowCount": 2,
+    "rowsHash": "hash-rcpt-l9-claims",
+    "rowsPreview": [
+      {
+        "panel_status": "inactive"
+      }
+    ],
+    "executedAt": "2026-04-02T14:00:00.000Z",
+    "mode": "replayed",
+    "durationMs": 40
+  },
+  {
+    "receiptId": "rcpt-l10-directory",
+    "runId": "run-cold",
+    "templateId": "directory_batch",
+    "sql": "SELECT phone FROM directory_listing WHERE listing_id = $listing_id",
+    "params": {
+      "listing_id": "listing:plan:L-00010"
+    },
+    "sources": [
+      "directory"
+    ],
+    "rowCount": 1,
+    "rowsHash": "hash-rcpt-l10-directory",
+    "rowsPreview": [
+      {
+        "phone": "555-0170"
+      }
+    ],
+    "executedAt": "2026-04-02T14:00:00.000Z",
+    "mode": "replayed",
+    "durationMs": 40
+  },
+  {
+    "receiptId": "rcpt-l10-nppes",
+    "runId": "run-cold",
+    "templateId": "nppes_org_by_npi",
+    "sql": "SELECT practice_phone FROM nppes WHERE npi = $npi",
+    "params": {
+      "npi": "1555123400"
+    },
+    "sources": [
+      "nppes"
+    ],
+    "rowCount": 1,
+    "rowsHash": "hash-rcpt-l10-nppes",
+    "rowsPreview": [
+      {
+        "practice_phone": "555-0170"
+      }
+    ],
+    "executedAt": "2026-04-02T14:00:00.000Z",
+    "mode": "replayed",
+    "durationMs": 40
+  }
+]

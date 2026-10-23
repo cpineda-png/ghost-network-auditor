@@ -1,0 +1,6 @@
+listing_id,field,before,after,source
+listing:plan:L-00001,address,"100 Old Mill Rd, Springfield","400 Harbor Ave, Springfield",claims
+listing:plan:L-00003,phone,555-0100,555-0142,roster
+listing:plan:L-00004,specialty,Cardiology,Cardiovascular disease,nppes
+listing:plan:L-00008,specialty,Psychiatry,Psychiatry,nppes
+listing:plan:L-00010,phone,555-0170,555-0170,nppes
