@@ -1,0 +1,41 @@
+{
+  "receipt": {
+    "receiptId": "receipt-claims-fixture",
+    "runId": "fixture",
+    "templateId": "claims_by_npi",
+    "sql": "-- template claims_by_npi",
+    "params": {
+      "npis": [
+        "1000000000"
+      ],
+      "sinceMonth": "2025-01"
+    },
+    "sources": [
+      "claims"
+    ],
+    "rowCount": 1,
+    "rowsHash": "c42a4ffdfe8580f3773cee6cf0f3e57330bf5a42632ad40cdbad5afd63e8fcd8",
+    "rowsPreview": [
+      {
+        "npi": "1000000000",
+        "claim_count": 12,
+        "last_claim_month": "2025-12"
+      }
+    ],
+    "executedAt": "2026-01-15T00:00:00.000Z",
+    "mode": "replayed",
+    "durationMs": 12
+  },
+  "columns": [
+    "npi",
+    "claim_count",
+    "last_claim_month"
+  ],
+  "rows": [
+    {
+      "npi": "1000000000",
+      "claim_count": 12,
+      "last_claim_month": "2025-12"
+    }
+  ]
+}

@@ -91,6 +91,34 @@ components:
         mode:
           type: string
           enum: [live, sample]
+    CatalogParam:
+      type: object
+      required: [name, type, required]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [string, string[], integer]
+        required:
+          type: boolean
+    CatalogTemplate:
+      type: object
+      required: [id, params]
+      properties:
+        id:
+          type: string
+          enum:
+            - directory_batch
+            - roster_by_npi
+            - claims_by_npi
+            - claims_locations_by_npi
+            - nppes_individual_by_npi
+            - nppes_org_by_npi
+        params:
+          type: array
+          items:
+            $ref: "#/components/schemas/CatalogParam"
     CatalogResponse:
       type: object
       required: [templates]
@@ -98,15 +126,44 @@ components:
         templates:
           type: array
           items:
-            type: object
-            additionalProperties: true
-      description: TODO placeholder. Catalog item shape is not in contracts yet.
+            $ref: "#/components/schemas/CatalogTemplate"
+          example:
+            - id: directory_batch
+              params:
+                - { name: county, type: string, required: true }
+                - { name: specialty, type: string, required: true }
+                - { name: batch, type: string, required: true }
+                - { name: limit, type: integer, required: false }
+            - id: roster_by_npi
+              params:
+                - { name: npis, type: string[], required: true }
+            - id: claims_by_npi
+              params:
+                - { name: npis, type: string[], required: true }
+                - { name: sinceMonth, type: string, required: true }
+            - id: claims_locations_by_npi
+              params:
+                - { name: npis, type: string[], required: true }
+                - { name: months, type: integer, required: true }
+            - id: nppes_individual_by_npi
+              params:
+                - { name: npis, type: string[], required: true }
+            - id: nppes_org_by_npi
+              params:
+                - { name: npis, type: string[], required: true }
     QueryRequest:
       type: object
       required: [templateId, params, runId, requestedBy]
       properties:
         templateId:
           type: string
+          enum:
+            - directory_batch
+            - roster_by_npi
+            - claims_by_npi
+            - claims_locations_by_npi
+            - nppes_individual_by_npi
+            - nppes_org_by_npi
         params:
           type: object
           additionalProperties: true
@@ -114,6 +171,45 @@ components:
           type: string
         requestedBy:
           type: string
+    RunReport:
+      type: object
+      required:
+        - runId
+        - useMemory
+        - listings
+        - applied
+        - escalated
+        - retried
+        - ghosts
+        - memoryHits
+        - models
+      properties:
+        runId:
+          type: string
+        useMemory:
+          type: boolean
+        listings:
+          type: integer
+        applied:
+          type: integer
+        escalated:
+          type: integer
+        retried:
+          type: integer
+        ghosts:
+          type: integer
+        memoryHits:
+          type: integer
+        models:
+          type: array
+          items:
+            type: object
+            required: [model, calls]
+            properties:
+              model:
+                type: string
+              calls:
+                type: integer
     Receipt:
       type: object
       required:
