@@ -9,7 +9,7 @@ body {
 }
 
 main {
-  max-width: 1100px;
+  max-width: 1280px;
   margin: 0 auto;
   padding: 24px;
 }
@@ -18,12 +18,90 @@ header {
   display: flex;
   align-items: baseline;
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
+}
+
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 h1,
-h2 {
+h2,
+h3,
+h4 {
   margin: 0;
+}
+
+h2 {
+  margin-bottom: 12px;
+}
+
+h3 {
+  margin: 12px 0 8px;
+}
+
+a {
+  color: #1b1b1b;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  background: #fff;
+  border: 1px solid #1b1b1b;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  color: #777;
+}
+
+input:not([type="radio"]):not([type="checkbox"]),
+textarea {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  box-sizing: border-box;
+  margin-top: 4px;
+  border: 1px solid #1b1b1b;
+  background: #fff;
+  padding: 4px 8px;
+}
+
+input[type="radio"],
+input[type="checkbox"] {
+  width: auto;
+  margin-right: 6px;
+}
+
+label {
+  display: block;
+  margin: 8px 0;
+}
+
+fieldset {
+  border: 1px solid #d4cfc4;
+  margin: 0 0 8px;
+}
+
+fieldset label {
+  display: inline-block;
+  margin-right: 16px;
+}
+
+:focus-visible {
+  outline: 2px solid #1b1b1b;
+  outline-offset: 2px;
 }
 
 .badge {
@@ -47,8 +125,12 @@ h2 {
 
 .panels {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+}
+
+.panel-wide {
+  grid-column: 1 / -1;
 }
 
 .panel {
@@ -58,6 +140,109 @@ h2 {
   min-height: 140px;
 }
 
-.panel p {
+.muted {
   color: #666;
+}
+
+.run-mode {
+  font-weight: bold;
+}
+
+.counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.actor-group + .actor-group {
+  margin-top: 8px;
+}
+
+.timeline {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.timeline li {
+  margin: 4px 0;
+}
+
+.chip {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 0 6px;
+  border: 1px solid #1b1b1b;
+  font-size: 12px;
+  background: #e7e1d3;
+}
+
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.evidence-card,
+.outreach-form {
+  border-top: 1px solid #d4cfc4;
+  padding-top: 8px;
+}
+
+.needs-human {
+  background: #f3d6c8;
+  padding: 4px 8px;
+}
+
+.receipt-panel {
+  position: fixed;
+  top: 48px;
+  right: 24px;
+  width: min(520px, calc(100% - 48px));
+  max-height: calc(100vh - 96px);
+  overflow: auto;
+  background: #fff;
+  border: 1px solid #1b1b1b;
+  padding: 16px;
+  z-index: 2;
+}
+
+.receipt-panel pre {
+  white-space: pre-wrap;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 13px;
+}
+
+.receipt-actions {
+  display: flex;
+  gap: 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+th,
+td {
+  border-bottom: 1px solid #d4cfc4;
+  text-align: left;
+  padding: 4px;
+  vertical-align: top;
+}
+
+th {
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .panels {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-wide {
+    grid-column: auto;
+  }
 }
