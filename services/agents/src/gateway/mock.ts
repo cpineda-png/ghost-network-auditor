@@ -20,18 +20,22 @@ export class MockGateway implements Gateway {
     const fixtureName =
       templateId === "directory_batch"
         ? "directory_batch"
-        : templateId === "roster_by_npi"
-          ? "roster_by_npi"
-          : "claims_by_npi";
+        : templateId === "roster_by_npis"
+          ? "roster_by_npis"
+          : "claims_by_npis";
     const fixture = loadFixture(fixtureName);
     let rows = fixture.rows;
     if (templateId === "directory_batch") {
-      const limit = typeof params.limit === "number" ? params.limit : Number(params.limit);
-      if (Number.isFinite(limit) && limit >= 0) {
-        rows = rows.slice(0, limit);
-      }
       if (params.batch) {
         rows = rows.filter((row) => (row as { batch?: string }).batch === params.batch);
+      }
+      const offset = Number(params.offset);
+      const start = Number.isFinite(offset) && offset > 0 ? offset : 0;
+      const limit = Number(params.limit);
+      if (Number.isFinite(limit) && limit >= 0) {
+        rows = rows.slice(start, start + limit);
+      } else if (start > 0) {
+        rows = rows.slice(start);
       }
     }
     if (templateId !== "directory_batch" && Array.isArray(params.npis)) {

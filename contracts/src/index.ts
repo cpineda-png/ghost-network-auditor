@@ -100,6 +100,11 @@ export const gatewayHealthSchema: z.ZodType<GatewayHealth> = z.object({
   mode: z.enum(["live", "sample"]),
 });
 
+export const TEMPLATE_IDS = ["directory_batch", "roster_by_npis", "claims_by_npis"] as const;
+
+export type TemplateId = (typeof TEMPLATE_IDS)[number];
+export const templateIdSchema = z.enum(TEMPLATE_IDS);
+
 export type CatalogParam = {
   name: string;
   type: string;
@@ -115,14 +120,14 @@ export const catalogParamSchema: z.ZodType<CatalogParam> = z.object({
 });
 
 export type CatalogTemplate = {
-  templateId: string;
+  templateId: TemplateId;
   description: string;
   params: CatalogParam[];
   sources: string[];
 };
 
 export const catalogTemplateSchema: z.ZodType<CatalogTemplate> = z.object({
-  templateId: z.string(),
+  templateId: templateIdSchema,
   description: z.string(),
   params: z.array(catalogParamSchema),
   sources: z.array(z.string()),
@@ -281,48 +286,6 @@ export const escalationSchema: z.ZodType<Escalation> = z.object({
 });
 
 export const THRESHOLDS = { toCritic: 0.7, retryFloor: 0.5, maxRetries: 2, maxRevisions: 2 } as const;
-
-export const TEMPLATE_IDS = [
-  "directory_batch",
-  "roster_by_npi",
-  "claims_by_npi",
-  "claims_locations_by_npi",
-  "nppes_individual_by_npi",
-  "nppes_org_by_npi",
-] as const;
-
-export type TemplateId = (typeof TEMPLATE_IDS)[number];
-export const templateIdSchema = z.enum(TEMPLATE_IDS);
-
-export type CatalogParam = {
-  name: string;
-  type: "string" | "string[]" | "integer";
-  required: boolean;
-};
-
-export const catalogParamSchema: z.ZodType<CatalogParam> = z.object({
-  name: z.string(),
-  type: z.enum(["string", "string[]", "integer"]),
-  required: z.boolean(),
-});
-
-export type CatalogTemplate = {
-  id: TemplateId;
-  params: CatalogParam[];
-};
-
-export const catalogTemplateSchema: z.ZodType<CatalogTemplate> = z.object({
-  id: templateIdSchema,
-  params: z.array(catalogParamSchema),
-});
-
-export type CatalogResponse = {
-  templates: CatalogTemplate[];
-};
-
-export const catalogResponseSchema: z.ZodType<CatalogResponse> = z.object({
-  templates: z.array(catalogTemplateSchema),
-});
 
 const nullableValueSchema = z.union([z.string(), z.boolean(), z.null()]);
 const rulingSourceSchema = z.union([sourceSchema, z.literal("other")]);

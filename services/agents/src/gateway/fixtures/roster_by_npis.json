@@ -2,8 +2,8 @@
   "receipt": {
     "receiptId": "receipt-roster-fixture",
     "runId": "fixture",
-    "templateId": "roster_by_npi",
-    "sql": "-- template roster_by_npi",
+    "templateId": "roster_by_npis",
+    "sql": "-- template roster_by_npis",
     "params": {
       "npis": [
         "1000000000"

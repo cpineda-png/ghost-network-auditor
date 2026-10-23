@@ -8,7 +8,7 @@ describe("smoke", () => {
     const llm: LlmClient = {
       chatJson: vi.fn().mockResolvedValue({
         data: {
-          rankings: [{ chunkIndex: 0, risk: 0.4, templates: ["roster_by_npi", "claims_by_npi"] }],
+          rankings: [{ chunkIndex: 0, risk: 0.4, templates: ["roster_by_npis", "claims_by_npis"] }],
           rationale: "batch A needs roster and claims",
         },
         model: "nemotron-super",

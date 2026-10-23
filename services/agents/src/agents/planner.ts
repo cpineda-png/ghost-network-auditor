@@ -61,10 +61,11 @@ export async function plan(input: {
   const query = await gateway.query(
     "directory_batch",
     {
-      county: request.scope.county ?? "",
-      specialty: request.scope.specialty ?? "",
+      county: request.scope.county,
+      specialty: request.scope.specialty,
       batch: request.scope.batch,
       limit: 10,
+      offset: 0,
     },
     runId,
   );
@@ -92,7 +93,16 @@ export async function plan(input: {
   }
 
   const catalog = await gateway.catalog();
-  const llmResult = await llm.chatJson("planner", plannerMessages(runId, query.receipt.receiptId, chunks, catalog.templates.map((t) => t.id)), plannerOutputSchema);
+  const llmResult = await llm.chatJson(
+    "planner",
+    plannerMessages(
+      runId,
+      query.receipt.receiptId,
+      chunks,
+      catalog.templates.map((template) => template.templateId),
+    ),
+    plannerOutputSchema,
+  );
 
   await world.append({
     runId,

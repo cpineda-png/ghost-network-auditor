@@ -58,6 +58,6 @@ describe("MockGateway", () => {
     expect(queryResponseSchema.parse(result).rows).toHaveLength(10);
     expect(result.receipt.templateId).toBe("directory_batch");
     const catalog = catalogResponseSchema.parse(await gateway.catalog());
-    expect(catalog.templates.map((t) => t.id)).toContain("roster_by_npi");
+    expect(catalog.templates.map((t) => t.templateId)).toContain("roster_by_npis");
   });
 });

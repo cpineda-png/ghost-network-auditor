@@ -1,0 +1,51 @@
+{
+  "receipt": {
+    "receiptId": "receipt-claims-fixture",
+    "runId": "fixture",
+    "templateId": "claims_by_npis",
+    "sql": "-- template claims_by_npis",
+    "params": {
+      "npis": [
+        "1000000000"
+      ],
+      "fromMonth": "2025-01",
+      "toMonth": "2025-12"
+    },
+    "sources": [
+      "claims"
+    ],
+    "rowCount": 1,
+    "rowsHash": "1af18605834d77401b5ac2873a030fb42401d1cd987dbb93dde7173e09f199bb",
+    "rowsPreview": [
+      {
+        "npi": "1000000000",
+        "service_address_line1": "100 Main St",
+        "service_zip": "62701",
+        "month": "2025-06",
+        "claim_count": 12,
+        "new_patient_count": 2
+      }
+    ],
+    "executedAt": "2026-01-15T00:00:00.000Z",
+    "mode": "replayed",
+    "durationMs": 12
+  },
+  "columns": [
+    "npi",
+    "service_address_line1",
+    "service_zip",
+    "month",
+    "claim_count",
+    "new_patient_count"
+  ],
+  "rows": [
+    {
+      "npi": "1000000000",
+      "service_address_line1": "100 Main St",
+      "service_zip": "62701",
+      "month": "2025-06",
+      "claim_count": 12,
+      "new_patient_count": 2
+    }
+  ]
+}

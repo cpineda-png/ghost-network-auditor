@@ -17,7 +17,7 @@ describe("planner chunks", () => {
     const llm: LlmClient = {
       chatJson: vi.fn().mockResolvedValue({
         data: plannerOutputSchema.parse({
-          rankings: [{ chunkIndex: 0, risk: 0.2, templates: ["roster_by_npi"] }],
+          rankings: [{ chunkIndex: 0, risk: 0.2, templates: ["roster_by_npis"] }],
           rationale: "low risk",
         }),
         model: "super",

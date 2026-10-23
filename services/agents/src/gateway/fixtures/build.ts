@@ -48,7 +48,7 @@ const directory = makeQueryResponse("directory_batch", { batch: "A" }, "fixture"
 });
 
 const roster = makeQueryResponse(
-  "roster_by_npi",
+  "roster_by_npis",
   { npis: [rows[0].npi] },
   "fixture",
   ["npi", "group_name", "specialty", "status"],
@@ -57,15 +57,24 @@ const roster = makeQueryResponse(
 );
 
 const claims = makeQueryResponse(
-  "claims_by_npi",
-  { npis: [rows[0].npi], sinceMonth: "2025-01" },
+  "claims_by_npis",
+  { npis: [rows[0].npi], fromMonth: "2025-01", toMonth: "2025-12" },
   "fixture",
-  ["npi", "claim_count", "last_claim_month"],
-  [{ npi: rows[0].npi, claim_count: 12, last_claim_month: "2025-12" }],
+  ["npi", "service_address_line1", "service_zip", "month", "claim_count", "new_patient_count"],
+  [
+    {
+      npi: rows[0].npi,
+      service_address_line1: "100 Main St",
+      service_zip: "62701",
+      month: "2025-06",
+      claim_count: 12,
+      new_patient_count: 2,
+    },
+  ],
   { receiptId: "receipt-claims-fixture", sources: ["claims"] },
 );
 
 const dir = dirname(fileURLToPath(import.meta.url));
 writeFileSync(join(dir, "directory_batch.json"), `${JSON.stringify(directory, null, 2)}\n`);
-writeFileSync(join(dir, "roster_by_npi.json"), `${JSON.stringify(roster, null, 2)}\n`);
-writeFileSync(join(dir, "claims_by_npi.json"), `${JSON.stringify(claims, null, 2)}\n`);
+writeFileSync(join(dir, "roster_by_npis.json"), `${JSON.stringify(roster, null, 2)}\n`);
+writeFileSync(join(dir, "claims_by_npis.json"), `${JSON.stringify(claims, null, 2)}\n`);
