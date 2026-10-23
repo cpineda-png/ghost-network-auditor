@@ -1,0 +1,697 @@
+[
+  {
+    "eventId": "evt-cold-001",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:01.000Z",
+    "actor": "planner",
+    "type": "run_started",
+    "entityId": "run-cold",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 220,
+      "replayed": true,
+      "batch": "A",
+      "listingIds": [
+        "listing:plan:L-00001",
+        "listing:plan:L-00002",
+        "listing:plan:L-00003",
+        "listing:plan:L-00004",
+        "listing:plan:L-00005",
+        "listing:plan:L-00006",
+        "listing:plan:L-00007",
+        "listing:plan:L-00008",
+        "listing:plan:L-00009",
+        "listing:plan:L-00010"
+      ]
+    }
+  },
+  {
+    "eventId": "evt-cold-002",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:02.000Z",
+    "actor": "planner",
+    "type": "task_created",
+    "entityId": "listing:plan:L-00001",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 180,
+      "replayed": true,
+      "listingName": "Sunrise Behavioral Group"
+    },
+    "field": "address"
+  },
+  {
+    "eventId": "evt-cold-003",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:03.000Z",
+    "actor": "planner",
+    "type": "task_created",
+    "entityId": "listing:plan:L-00002",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 160,
+      "replayed": true,
+      "listingName": "Hollow Oak Counseling"
+    },
+    "field": "status"
+  },
+  {
+    "eventId": "evt-cold-004",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:04.000Z",
+    "actor": "planner",
+    "type": "task_created",
+    "entityId": "listing:plan:L-00004",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 170,
+      "replayed": true,
+      "listingName": "Northside Cardiology"
+    },
+    "field": "specialty"
+  },
+  {
+    "eventId": "evt-cold-005",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:05.000Z",
+    "actor": "planner",
+    "type": "task_created",
+    "entityId": "listing:plan:L-00006",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 150,
+      "replayed": true,
+      "listingName": "Cedar Ridge Dental"
+    },
+    "field": "accepting"
+  },
+  {
+    "eventId": "evt-cold-006",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:06.000Z",
+    "actor": "investigator.contact",
+    "type": "claim_added",
+    "entityId": "listing:plan:L-00001",
+    "payload": {
+      "model": "nemotron-lightning",
+      "latencyMs": 310,
+      "replayed": true,
+      "source": "directory",
+      "value": "100 Old Mill Rd, Springfield",
+      "receiptIds": [
+        "rcpt-l1-directory"
+      ]
+    },
+    "field": "address"
+  },
+  {
+    "eventId": "evt-cold-007",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:07.000Z",
+    "actor": "investigator.contact",
+    "type": "claim_added",
+    "entityId": "listing:plan:L-00001",
+    "payload": {
+      "model": "nemotron-lightning",
+      "latencyMs": 340,
+      "replayed": true,
+      "source": "claims",
+      "value": "400 Harbor Ave, Springfield",
+      "receiptIds": [
+        "rcpt-l1-claims"
+      ]
+    },
+    "field": "address"
+  },
+  {
+    "eventId": "evt-cold-008",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:08.000Z",
+    "actor": "investigator.status",
+    "type": "claim_added",
+    "entityId": "listing:plan:L-00002",
+    "payload": {
+      "model": "nemotron-lightning",
+      "latencyMs": 280,
+      "replayed": true,
+      "source": "roster",
+      "value": "terminated",
+      "receiptIds": [
+        "rcpt-l2-roster"
+      ]
+    },
+    "field": "status"
+  },
+  {
+    "eventId": "evt-cold-009",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:09.000Z",
+    "actor": "investigator.status",
+    "type": "claim_added",
+    "entityId": "listing:plan:L-00002",
+    "payload": {
+      "model": "nemotron-lightning",
+      "latencyMs": 260,
+      "replayed": true,
+      "source": "directory",
+      "value": "accepting",
+      "receiptIds": [
+        "rcpt-l2-directory"
+      ]
+    },
+    "field": "status"
+  },
+  {
+    "eventId": "evt-cold-010",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:10.000Z",
+    "actor": "investigator.contact",
+    "type": "claim_added",
+    "entityId": "listing:plan:L-00003",
+    "payload": {
+      "model": "nemotron-lightning",
+      "latencyMs": 240,
+      "replayed": true,
+      "source": "roster",
+      "value": "555-0142",
+      "receiptIds": [
+        "rcpt-l3-roster"
+      ]
+    },
+    "field": "phone"
+  },
+  {
+    "eventId": "evt-cold-011",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:11.000Z",
+    "actor": "investigator.specialty",
+    "type": "claim_added",
+    "entityId": "listing:plan:L-00004",
+    "payload": {
+      "model": "nemotron-lightning",
+      "latencyMs": 300,
+      "replayed": true,
+      "source": "directory",
+      "value": "Cardiology",
+      "receiptIds": [
+        "rcpt-l4-directory"
+      ]
+    },
+    "field": "specialty"
+  },
+  {
+    "eventId": "evt-cold-012",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:12.000Z",
+    "actor": "investigator.specialty",
+    "type": "claim_added",
+    "entityId": "listing:plan:L-00004",
+    "payload": {
+      "model": "nemotron-lightning",
+      "latencyMs": 330,
+      "replayed": true,
+      "source": "nppes",
+      "value": "Cardiovascular disease",
+      "receiptIds": [
+        "rcpt-l4-nppes"
+      ]
+    },
+    "field": "specialty"
+  },
+  {
+    "eventId": "evt-cold-013",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:13.000Z",
+    "actor": "investigator.status",
+    "type": "claim_added",
+    "entityId": "listing:plan:L-00005",
+    "payload": {
+      "model": "nemotron-lightning",
+      "latencyMs": 250,
+      "replayed": true,
+      "source": "directory",
+      "value": "active",
+      "receiptIds": [
+        "rcpt-l5-directory"
+      ]
+    },
+    "field": "status"
+  },
+  {
+    "eventId": "evt-cold-014",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:14.000Z",
+    "actor": "investigator.status",
+    "type": "claim_added",
+    "entityId": "listing:plan:L-00006",
+    "payload": {
+      "model": "nemotron-lightning",
+      "latencyMs": 270,
+      "replayed": true,
+      "source": "directory",
+      "value": true,
+      "receiptIds": [
+        "rcpt-l6-directory"
+      ]
+    },
+    "field": "accepting"
+  },
+  {
+    "eventId": "evt-cold-015",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:15.000Z",
+    "actor": "investigator.status",
+    "type": "claim_added",
+    "entityId": "listing:plan:L-00006",
+    "payload": {
+      "model": "nemotron-lightning",
+      "latencyMs": 290,
+      "replayed": true,
+      "source": "roster",
+      "value": false,
+      "receiptIds": [
+        "rcpt-l6-roster"
+      ]
+    },
+    "field": "accepting"
+  },
+  {
+    "eventId": "evt-cold-016",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:16.000Z",
+    "actor": "investigator.specialty",
+    "type": "claim_added",
+    "entityId": "listing:plan:L-00008",
+    "payload": {
+      "model": "nemotron-lightning",
+      "latencyMs": 220,
+      "replayed": true,
+      "source": "nppes",
+      "value": "Psychiatry",
+      "receiptIds": [
+        "rcpt-l8-nppes"
+      ]
+    },
+    "field": "specialty"
+  },
+  {
+    "eventId": "evt-cold-017",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:17.000Z",
+    "actor": "investigator.contact",
+    "type": "claim_added",
+    "entityId": "listing:plan:L-00010",
+    "payload": {
+      "model": "nemotron-lightning",
+      "latencyMs": 210,
+      "replayed": true,
+      "source": "nppes",
+      "value": "555-0170",
+      "receiptIds": [
+        "rcpt-l10-nppes"
+      ]
+    },
+    "field": "phone"
+  },
+  {
+    "eventId": "evt-cold-018",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:18.000Z",
+    "actor": "arbiter",
+    "type": "conflict_found",
+    "entityId": "listing:plan:L-00001",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 410,
+      "replayed": true,
+      "sources": [
+        "directory",
+        "claims"
+      ]
+    },
+    "field": "address"
+  },
+  {
+    "eventId": "evt-cold-019",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:19.000Z",
+    "actor": "arbiter",
+    "type": "proposal_made",
+    "entityId": "listing:plan:L-00001",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 520,
+      "replayed": true,
+      "proposalId": "prop-l1",
+      "value": "400 Harbor Ave, Springfield",
+      "source": "claims",
+      "confidence": 0.91
+    },
+    "field": "address"
+  },
+  {
+    "eventId": "evt-cold-020",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:20.000Z",
+    "actor": "critic",
+    "type": "critique",
+    "entityId": "listing:plan:L-00001",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 480,
+      "replayed": true,
+      "proposalId": "prop-l1",
+      "verdict": "pass",
+      "reasons": [
+        "Claims address is newer than the directory row."
+      ]
+    }
+  },
+  {
+    "eventId": "evt-cold-021",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:21.000Z",
+    "actor": "arbiter",
+    "type": "applied",
+    "entityId": "listing:plan:L-00001",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 190,
+      "replayed": true,
+      "value": "400 Harbor Ave, Springfield",
+      "source": "claims"
+    },
+    "field": "address"
+  },
+  {
+    "eventId": "evt-cold-022",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:22.000Z",
+    "actor": "arbiter",
+    "type": "conflict_found",
+    "entityId": "listing:plan:L-00004",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 390,
+      "replayed": true,
+      "sources": [
+        "directory",
+        "nppes"
+      ]
+    },
+    "field": "specialty"
+  },
+  {
+    "eventId": "evt-cold-023",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:23.000Z",
+    "actor": "arbiter",
+    "type": "proposal_made",
+    "entityId": "listing:plan:L-00004",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 510,
+      "replayed": true,
+      "proposalId": "prop-l4-1",
+      "value": "Cardiology",
+      "source": "directory",
+      "confidence": 0.74
+    },
+    "field": "specialty"
+  },
+  {
+    "eventId": "evt-cold-024",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:24.000Z",
+    "actor": "critic",
+    "type": "critique",
+    "entityId": "listing:plan:L-00004",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 610,
+      "replayed": true,
+      "proposalId": "prop-l4-1",
+      "verdict": "revise",
+      "reasons": [
+        "Use the NPPES taxonomy label."
+      ]
+    }
+  },
+  {
+    "eventId": "evt-cold-025",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:25.000Z",
+    "actor": "arbiter",
+    "type": "proposal_made",
+    "entityId": "listing:plan:L-00004",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 470,
+      "replayed": true,
+      "proposalId": "prop-l4-2",
+      "value": "Cardiovascular disease",
+      "source": "nppes",
+      "confidence": 0.84
+    },
+    "field": "specialty"
+  },
+  {
+    "eventId": "evt-cold-026",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:26.000Z",
+    "actor": "critic",
+    "type": "critique",
+    "entityId": "listing:plan:L-00004",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 450,
+      "replayed": true,
+      "proposalId": "prop-l4-2",
+      "verdict": "pass",
+      "reasons": [
+        "Revised specialty matches the NPPES receipt."
+      ]
+    }
+  },
+  {
+    "eventId": "evt-cold-027",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:27.000Z",
+    "actor": "arbiter",
+    "type": "applied",
+    "entityId": "listing:plan:L-00004",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 180,
+      "replayed": true,
+      "value": "Cardiovascular disease",
+      "source": "nppes"
+    },
+    "field": "specialty"
+  },
+  {
+    "eventId": "evt-cold-028",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:28.000Z",
+    "actor": "arbiter",
+    "type": "conflict_found",
+    "entityId": "listing:plan:L-00005",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 360,
+      "replayed": true,
+      "sources": [
+        "directory",
+        "roster"
+      ]
+    },
+    "field": "status"
+  },
+  {
+    "eventId": "evt-cold-029",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:29.000Z",
+    "actor": "arbiter",
+    "type": "proposal_made",
+    "entityId": "listing:plan:L-00005",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 440,
+      "replayed": true,
+      "proposalId": "prop-l5",
+      "value": "active",
+      "source": "directory",
+      "confidence": 0.62
+    },
+    "field": "status"
+  },
+  {
+    "eventId": "evt-cold-030",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:30.000Z",
+    "actor": "risk",
+    "type": "retry_requested",
+    "entityId": "listing:plan:L-00005",
+    "payload": {
+      "reason": "Confidence 0.62 is below 0.70.",
+      "confidence": 0.62
+    },
+    "field": "status"
+  },
+  {
+    "eventId": "evt-cold-031",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:31.000Z",
+    "actor": "arbiter",
+    "type": "conflict_found",
+    "entityId": "listing:plan:L-00002",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 430,
+      "replayed": true,
+      "sources": [
+        "directory",
+        "roster",
+        "claims"
+      ],
+      "ghost": true
+    },
+    "field": "status"
+  },
+  {
+    "eventId": "evt-cold-032",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:32.000Z",
+    "actor": "risk",
+    "type": "escalated",
+    "entityId": "listing:plan:L-00002",
+    "payload": {
+      "reason": "Listed as accepting, no claims in 14 months, terminated in the roster.",
+      "confidence": 0.42
+    },
+    "field": "status"
+  },
+  {
+    "eventId": "evt-cold-033",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:33.000Z",
+    "actor": "arbiter",
+    "type": "conflict_found",
+    "entityId": "listing:plan:L-00006",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 400,
+      "replayed": true,
+      "sources": [
+        "directory",
+        "roster"
+      ]
+    },
+    "field": "accepting"
+  },
+  {
+    "eventId": "evt-cold-034",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:34.000Z",
+    "actor": "risk",
+    "type": "escalated",
+    "entityId": "listing:plan:L-00006",
+    "payload": {
+      "reason": "Directory says accepting and roster says not accepting.",
+      "confidence": 0.48
+    },
+    "field": "accepting"
+  },
+  {
+    "eventId": "evt-cold-035",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:35.000Z",
+    "actor": "risk",
+    "type": "escalated",
+    "entityId": "listing:plan:L-00009",
+    "payload": {
+      "reason": "Status confidence is under 0.50.",
+      "confidence": 0.41
+    },
+    "field": "status"
+  },
+  {
+    "eventId": "evt-cold-036",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:36.000Z",
+    "actor": "arbiter",
+    "type": "applied",
+    "entityId": "listing:plan:L-00003",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 160,
+      "replayed": true,
+      "value": "555-0142",
+      "source": "roster"
+    },
+    "field": "phone"
+  },
+  {
+    "eventId": "evt-cold-037",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:37.000Z",
+    "actor": "arbiter",
+    "type": "applied",
+    "entityId": "listing:plan:L-00008",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 150,
+      "replayed": true,
+      "value": "Psychiatry",
+      "source": "nppes"
+    },
+    "field": "specialty"
+  },
+  {
+    "eventId": "evt-cold-038",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:38.000Z",
+    "actor": "arbiter",
+    "type": "applied",
+    "entityId": "listing:plan:L-00010",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 140,
+      "replayed": true,
+      "value": "555-0170",
+      "source": "nppes"
+    },
+    "field": "phone"
+  },
+  {
+    "eventId": "evt-cold-039",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:39.000Z",
+    "actor": "human",
+    "type": "ruling_recorded",
+    "entityId": "listing:plan:L-00007",
+    "payload": {
+      "value": "555-0160",
+      "source": "directory",
+      "analyst": "analyst",
+      "note": "Confirmed the directory phone."
+    },
+    "field": "phone"
+  },
+  {
+    "eventId": "evt-cold-040",
+    "runId": "run-cold",
+    "ts": "2026-04-02T14:00:40.000Z",
+    "actor": "planner",
+    "type": "run_finished",
+    "entityId": "run-cold",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 200,
+      "replayed": true,
+      "applied": 5,
+      "escalated": 3,
+      "retried": 1
+    }
+  }
+]
