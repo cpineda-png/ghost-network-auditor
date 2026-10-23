@@ -62,6 +62,18 @@ export const queryResponseSchema: z.ZodType<QueryResponse> = z.object({
   rows: z.array(z.unknown()),
 });
 
+export type QueryError = {
+  error: string;
+  templateId: string;
+  sqlState: string | null;
+};
+
+export const queryErrorSchema: z.ZodType<QueryError> = z.object({
+  error: z.string(),
+  templateId: z.string(),
+  sqlState: z.string().nullable(),
+});
+
 export type ReplayResponse = {
   receiptId: string;
   match: boolean;
@@ -86,6 +98,42 @@ export type GatewayHealth = {
 export const gatewayHealthSchema: z.ZodType<GatewayHealth> = z.object({
   zetaris: z.enum(["up", "down", "not_configured"]),
   mode: z.enum(["live", "sample"]),
+});
+
+export type CatalogParam = {
+  name: string;
+  type: string;
+  required: boolean;
+  allowed?: string[];
+};
+
+export const catalogParamSchema: z.ZodType<CatalogParam> = z.object({
+  name: z.string(),
+  type: z.string(),
+  required: z.boolean(),
+  allowed: z.array(z.string()).optional(),
+});
+
+export type CatalogTemplate = {
+  templateId: string;
+  description: string;
+  params: CatalogParam[];
+  sources: string[];
+};
+
+export const catalogTemplateSchema: z.ZodType<CatalogTemplate> = z.object({
+  templateId: z.string(),
+  description: z.string(),
+  params: z.array(catalogParamSchema),
+  sources: z.array(z.string()),
+});
+
+export type CatalogResponse = {
+  templates: CatalogTemplate[];
+};
+
+export const catalogResponseSchema: z.ZodType<CatalogResponse> = z.object({
+  templates: z.array(catalogTemplateSchema),
 });
 
 export type WmEvent = {
