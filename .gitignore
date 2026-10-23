@@ -10,3 +10,4 @@ services/agents/.data/
 Thumbs.db
 .DS_Store
 *.log
+__pycache__/
