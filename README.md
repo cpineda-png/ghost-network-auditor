@@ -32,7 +32,7 @@ bash scripts/verify.sh
 
 ## Live setup
 
-Fill in `.env` (never commit it): NVIDIA API key and Nemotron model names, Zetaris JDBC URL and credentials, and place the Zetaris JDBC driver JAR in `drivers/` (not committed). Set `SAMPLE_MODE=false` and `LLM_REPLAY=false`. Zetaris runs on the host (JDBC port 10000), not in Compose. Register sources with `data/zetaris/register-sources.sql` in the Zetaris SQL editor, one statement at a time.
+Fill in `.env` (never commit it): NVIDIA API key and Nemotron model names, Zetaris JDBC URL and credentials, and place the Zetaris JDBC driver JAR in `drivers/` (not committed). Leave `ZETARIS_JDBC_JAR` empty to use the single JAR in `drivers/`. The gateway loads that JAR in an isolated class loader so the driver's logging libraries stay off Spring's classpath. Set `SAMPLE_MODE=false` and `LLM_REPLAY=false`. Zetaris runs on the host (JDBC port 10000), not in Compose. Register sources with `data/zetaris/register-sources.sql` in the Zetaris SQL editor, one statement at a time.
 
 ## Architecture
 

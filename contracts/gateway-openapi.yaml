@@ -22,8 +22,8 @@ paths:
       summary: Query template catalog
       operationId: getCatalog
       responses:
-        "501":
-          description: Not implemented
+        "200":
+          description: Named query templates
           content:
             application/json:
               schema:
@@ -39,12 +39,30 @@ paths:
             schema:
               $ref: "#/components/schemas/QueryRequest"
       responses:
-        "501":
-          description: Not implemented
+        "200":
+          description: Rows and a receipt
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/QueryResponse"
+        "400":
+          description: Unknown template or invalid params
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "502":
+          description: The database rejected the query
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueryError"
+        "503":
+          description: The driver could not connect or the query timed out, and no sample recording exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
   /replay/{receiptId}:
     post:
       summary: Replay a stored receipt
@@ -73,12 +91,14 @@ paths:
           schema:
             type: string
       responses:
-        "501":
-          description: Not implemented
+        "200":
+          description: Stored receipt
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Receipt"
+        "404":
+          description: Receipt does not exist
 components:
   schemas:
     GatewayHealth:
@@ -91,6 +111,23 @@ components:
         mode:
           type: string
           enum: [live, sample]
+    ErrorMessage:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+    QueryError:
+      type: object
+      required: [error, templateId, sqlState]
+      properties:
+        error:
+          type: string
+        templateId:
+          type: string
+        sqlState:
+          type: string
+          nullable: true
     CatalogParam:
       type: object
       required: [name, type, required]
@@ -99,26 +136,28 @@ components:
           type: string
         type:
           type: string
-          enum: [string, string[], integer]
         required:
           type: boolean
+        allowed:
+          type: array
+          items:
+            type: string
     CatalogTemplate:
       type: object
-      required: [id, params]
+      required: [templateId, description, params, sources]
       properties:
-        id:
+        templateId:
           type: string
-          enum:
-            - directory_batch
-            - roster_by_npi
-            - claims_by_npi
-            - claims_locations_by_npi
-            - nppes_individual_by_npi
-            - nppes_org_by_npi
+        description:
+          type: string
         params:
           type: array
           items:
             $ref: "#/components/schemas/CatalogParam"
+        sources:
+          type: array
+          items:
+            type: string
     CatalogResponse:
       type: object
       required: [templates]
@@ -127,43 +166,12 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/CatalogTemplate"
-          example:
-            - id: directory_batch
-              params:
-                - { name: county, type: string, required: true }
-                - { name: specialty, type: string, required: true }
-                - { name: batch, type: string, required: true }
-                - { name: limit, type: integer, required: false }
-            - id: roster_by_npi
-              params:
-                - { name: npis, type: string[], required: true }
-            - id: claims_by_npi
-              params:
-                - { name: npis, type: string[], required: true }
-                - { name: sinceMonth, type: string, required: true }
-            - id: claims_locations_by_npi
-              params:
-                - { name: npis, type: string[], required: true }
-                - { name: months, type: integer, required: true }
-            - id: nppes_individual_by_npi
-              params:
-                - { name: npis, type: string[], required: true }
-            - id: nppes_org_by_npi
-              params:
-                - { name: npis, type: string[], required: true }
     QueryRequest:
       type: object
       required: [templateId, params, runId, requestedBy]
       properties:
         templateId:
           type: string
-          enum:
-            - directory_batch
-            - roster_by_npi
-            - claims_by_npi
-            - claims_locations_by_npi
-            - nppes_individual_by_npi
-            - nppes_org_by_npi
         params:
           type: object
           additionalProperties: true
@@ -171,45 +179,6 @@ components:
           type: string
         requestedBy:
           type: string
-    RunReport:
-      type: object
-      required:
-        - runId
-        - useMemory
-        - listings
-        - applied
-        - escalated
-        - retried
-        - ghosts
-        - memoryHits
-        - models
-      properties:
-        runId:
-          type: string
-        useMemory:
-          type: boolean
-        listings:
-          type: integer
-        applied:
-          type: integer
-        escalated:
-          type: integer
-        retried:
-          type: integer
-        ghosts:
-          type: integer
-        memoryHits:
-          type: integer
-        models:
-          type: array
-          items:
-            type: object
-            required: [model, calls]
-            properties:
-              model:
-                type: string
-              calls:
-                type: integer
     Receipt:
       type: object
       required:

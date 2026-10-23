@@ -1,0 +1,75 @@
+templates:
+  - id: directory_batch
+    description: Directory listings for one batch, optionally filtered by county and specialty, ordered by listing_id.
+    source: directory
+    orderBy: listing_id
+    limit: true
+    columns:
+      - listing_id
+      - batch
+      - npi
+      - provider_name
+      - provider_type
+      - specialty
+      - group_name
+      - address_line1
+      - city
+      - state
+      - zip
+      - phone
+      - accepting_new_patients
+      - network_status
+      - last_verified_date
+      - county
+    where:
+      - { op: eq, column: batch, param: batch }
+      - { op: eq, column: county, param: county }
+      - { op: eq, column: specialty, param: specialty }
+    params:
+      - { name: batch, type: enum, required: true, allowed: [A, B] }
+      - { name: county, type: string, required: false }
+      - { name: specialty, type: string, required: false }
+      - { name: limit, type: integer, required: false, min: 1, max: 500, default: 300 }
+      - { name: offset, type: integer, required: false, min: 0, max: 1000000, default: 0 }
+
+  - id: roster_by_npis
+    description: Roster rows for one to ten NPIs.
+    source: roster
+    columns:
+      - npi
+      - provider_name
+      - provider_type
+      - group_name
+      - taxonomy_code
+      - specialty
+      - status
+      - effective_date
+      - term_date
+      - address_line1
+      - city
+      - state
+      - zip
+      - phone
+    where:
+      - { op: in, column: npi, param: npis }
+    params:
+      - { name: npis, type: "npi[]", required: true }
+
+  - id: claims_by_npis
+    description: Claims counts for one to ten NPIs between two months.
+    source: claims
+    columns:
+      - npi
+      - service_address_line1
+      - service_zip
+      - month
+      - claim_count
+      - new_patient_count
+    where:
+      - { op: in, column: npi, param: npis }
+      - { op: gte, column: month, param: fromMonth }
+      - { op: lte, column: month, param: toMonth }
+    params:
+      - { name: npis, type: "npi[]", required: true }
+      - { name: fromMonth, type: month, required: true }
+      - { name: toMonth, type: month, required: true }

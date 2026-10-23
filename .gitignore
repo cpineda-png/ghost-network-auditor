@@ -5,8 +5,10 @@ dist/
 .env.local
 drivers/*.jar
 traces/
+receipts/
 services/agents/.data/
 .idea/
 Thumbs.db
 .DS_Store
 *.log
+__pycache__/

@@ -8,7 +8,8 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./data/sample/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+      - ./data/sample/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./data/sample/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
@@ -26,8 +27,16 @@ services:
       ZETARIS_JDBC_DRIVER_CLASS: ${ZETARIS_JDBC_DRIVER_CLASS}
       ZETARIS_USERNAME: ${ZETARIS_USERNAME}
       ZETARIS_PASSWORD: ${ZETARIS_PASSWORD}
+      GNA_TABLE_DIRECTORY: ${GNA_TABLE_DIRECTORY:-PLAN_PG.directory_listing}
+      GNA_TABLE_ROSTER: ${GNA_TABLE_ROSTER:-GNA_FILES.roster}
+      GNA_TABLE_CLAIMS: ${GNA_TABLE_CLAIMS:-GNA_FILES.claims}
+      GNA_RECEIPTS_DIR: /app/receipts
+      GNA_SAMPLES_DIR: /app/samples
+      RECORD_MODE: ${RECORD_MODE:-false}
     volumes:
       - ./drivers:/drivers:ro
+      - ./services/gateway/src/main/resources/samples:/app/samples
+      - ./receipts:/app/receipts
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:

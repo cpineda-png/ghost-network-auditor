@@ -1,0 +1,20 @@
+{
+  "runId": "run-warm",
+  "useMemory": true,
+  "listings": 10,
+  "applied": 5,
+  "escalated": 2,
+  "retried": 0,
+  "ghosts": 1,
+  "memoryHits": 1,
+  "models": [
+    {
+      "model": "nemotron-super",
+      "calls": 6
+    },
+    {
+      "model": "nemotron-lightning",
+      "calls": 2
+    }
+  ]
+}

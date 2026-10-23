@@ -10,7 +10,12 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 
-@SpringBootTest(properties = "SAMPLE_MODE=true")
+@SpringBootTest(properties = {
+        "SAMPLE_MODE=true",
+        "ZETARIS_JDBC_URL=",
+        "ZETARIS_JDBC_JAR=",
+        "ZETARIS_DRIVERS_DIR=target/empty-drivers"
+})
 @AutoConfigureMockMvc
 class HealthControllerTest {
 

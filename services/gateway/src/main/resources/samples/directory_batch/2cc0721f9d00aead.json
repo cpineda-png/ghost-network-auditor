@@ -1,0 +1,6 @@
+{
+  "columns": ["listing_id", "batch"],
+  "rows": [
+    {"batch": "A", "listing_id": "L-00001"}
+  ]
+}

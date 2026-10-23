@@ -1,0 +1,329 @@
+[
+  {
+    "runId": "run-warm",
+    "listingId": "listing:plan:L-00001",
+    "field": "address",
+    "sources": [
+      {
+        "source": "directory",
+        "value": "100 Old Mill Rd, Springfield",
+        "receiptIds": [
+          "rcpt-l1-directory"
+        ]
+      },
+      {
+        "source": "claims",
+        "value": "400 Harbor Ave, Springfield",
+        "receiptIds": [
+          "rcpt-l1-claims"
+        ]
+      }
+    ],
+    "winner": {
+      "value": "400 Harbor Ave, Springfield",
+      "source": "claims"
+    },
+    "confidence": 0.93,
+    "rationale": "Sunrise Behavioral Group address was applied by citing memory mem-sunrise-address instead of escalating.",
+    "critique": {
+      "verdict": "pass",
+      "reasons": [
+        "Memory mem-sunrise-address cites the claims address."
+      ]
+    },
+    "status": "applied",
+    "memoryIds": [
+      "mem-sunrise-address"
+    ]
+  },
+  {
+    "runId": "run-warm",
+    "listingId": "listing:plan:L-00002",
+    "field": "status",
+    "sources": [
+      {
+        "source": "directory",
+        "value": "accepting",
+        "receiptIds": [
+          "rcpt-l2-directory"
+        ]
+      },
+      {
+        "source": "roster",
+        "value": "terminated",
+        "receiptIds": [
+          "rcpt-l2-roster"
+        ]
+      },
+      {
+        "source": "claims",
+        "value": null,
+        "receiptIds": [
+          "rcpt-l2-claims"
+        ]
+      }
+    ],
+    "winner": null,
+    "confidence": 0.42,
+    "rationale": "Hollow Oak Counseling is listed as accepting, has no claims in 14 months, and is terminated in the roster.",
+    "critique": null,
+    "status": "escalated",
+    "memoryIds": []
+  },
+  {
+    "runId": "run-warm",
+    "listingId": "listing:plan:L-00003",
+    "field": "phone",
+    "sources": [
+      {
+        "source": "directory",
+        "value": "555-0100",
+        "receiptIds": [
+          "rcpt-l3-directory"
+        ]
+      },
+      {
+        "source": "roster",
+        "value": "555-0142",
+        "receiptIds": [
+          "rcpt-l3-roster"
+        ]
+      }
+    ],
+    "winner": {
+      "value": "555-0142",
+      "source": "roster"
+    },
+    "confidence": 0.88,
+    "rationale": "Pine Street Pediatrics roster phone is the current number.",
+    "critique": {
+      "verdict": "pass",
+      "reasons": [
+        "Roster receipt matches recent claim calls."
+      ]
+    },
+    "status": "applied",
+    "memoryIds": []
+  },
+  {
+    "runId": "run-warm",
+    "listingId": "listing:plan:L-00004",
+    "field": "specialty",
+    "sources": [
+      {
+        "source": "directory",
+        "value": "Cardiology",
+        "receiptIds": [
+          "rcpt-l4-directory"
+        ]
+      },
+      {
+        "source": "nppes",
+        "value": "Cardiovascular disease",
+        "receiptIds": [
+          "rcpt-l4-nppes"
+        ]
+      }
+    ],
+    "winner": {
+      "value": "Cardiovascular disease",
+      "source": "nppes"
+    },
+    "confidence": 0.84,
+    "rationale": "Northside Cardiology specialty was revised to the NPPES taxonomy label.",
+    "critique": {
+      "verdict": "pass",
+      "reasons": [
+        "Revised once, then the NPPES label passed."
+      ]
+    },
+    "status": "applied",
+    "memoryIds": []
+  },
+  {
+    "runId": "run-warm",
+    "listingId": "listing:plan:L-00005",
+    "field": "status",
+    "sources": [
+      {
+        "source": "directory",
+        "value": "active",
+        "receiptIds": [
+          "rcpt-l5-directory"
+        ]
+      },
+      {
+        "source": "roster",
+        "value": "active",
+        "receiptIds": [
+          "rcpt-l5-roster"
+        ]
+      }
+    ],
+    "winner": null,
+    "confidence": 0.62,
+    "rationale": "Lakeside Family Medicine status sits between the retry floor and the critic threshold. One retry was requested.",
+    "critique": null,
+    "status": "unchanged",
+    "memoryIds": []
+  },
+  {
+    "runId": "run-warm",
+    "listingId": "listing:plan:L-00006",
+    "field": "accepting",
+    "sources": [
+      {
+        "source": "directory",
+        "value": true,
+        "receiptIds": [
+          "rcpt-l6-directory"
+        ]
+      },
+      {
+        "source": "roster",
+        "value": false,
+        "receiptIds": [
+          "rcpt-l6-roster"
+        ]
+      }
+    ],
+    "winner": null,
+    "confidence": 0.48,
+    "rationale": "Cedar Ridge Dental is marked accepting in the directory and not accepting in the roster.",
+    "critique": null,
+    "status": "escalated",
+    "memoryIds": []
+  },
+  {
+    "runId": "run-warm",
+    "listingId": "listing:plan:L-00007",
+    "field": "phone",
+    "sources": [
+      {
+        "source": "directory",
+        "value": "555-0160",
+        "receiptIds": [
+          "rcpt-l7-directory"
+        ]
+      },
+      {
+        "source": "roster",
+        "value": "555-0160",
+        "receiptIds": [
+          "rcpt-l7-roster"
+        ]
+      }
+    ],
+    "winner": {
+      "value": "555-0160",
+      "source": "directory"
+    },
+    "confidence": 0.97,
+    "rationale": "West End Orthopedics phone agrees across directory and roster.",
+    "critique": {
+      "verdict": "pass",
+      "reasons": [
+        "Sources agree."
+      ]
+    },
+    "status": "unchanged",
+    "memoryIds": []
+  },
+  {
+    "runId": "run-warm",
+    "listingId": "listing:plan:L-00008",
+    "field": "specialty",
+    "sources": [
+      {
+        "source": "directory",
+        "value": "Psychiatry",
+        "receiptIds": [
+          "rcpt-l8-directory"
+        ]
+      },
+      {
+        "source": "nppes",
+        "value": "Psychiatry",
+        "receiptIds": [
+          "rcpt-l8-nppes"
+        ]
+      }
+    ],
+    "winner": {
+      "value": "Psychiatry",
+      "source": "nppes"
+    },
+    "confidence": 0.86,
+    "rationale": "Maple Grove Psychiatry specialty matches NPPES.",
+    "critique": {
+      "verdict": "pass",
+      "reasons": [
+        "Directory and NPPES agree."
+      ]
+    },
+    "status": "applied",
+    "memoryIds": []
+  },
+  {
+    "runId": "run-warm",
+    "listingId": "listing:plan:L-00009",
+    "field": "status",
+    "sources": [
+      {
+        "source": "directory",
+        "value": "active",
+        "receiptIds": [
+          "rcpt-l9-directory"
+        ]
+      },
+      {
+        "source": "claims",
+        "value": "inactive",
+        "receiptIds": [
+          "rcpt-l9-claims"
+        ]
+      }
+    ],
+    "winner": null,
+    "confidence": 0.72,
+    "rationale": "Riverbend Urgent Care was left unchanged on the warm run.",
+    "critique": null,
+    "status": "unchanged",
+    "memoryIds": []
+  },
+  {
+    "runId": "run-warm",
+    "listingId": "listing:plan:L-00010",
+    "field": "phone",
+    "sources": [
+      {
+        "source": "directory",
+        "value": "555-0170",
+        "receiptIds": [
+          "rcpt-l10-directory"
+        ]
+      },
+      {
+        "source": "nppes",
+        "value": "555-0170",
+        "receiptIds": [
+          "rcpt-l10-nppes"
+        ]
+      }
+    ],
+    "winner": {
+      "value": "555-0170",
+      "source": "nppes"
+    },
+    "confidence": 0.9,
+    "rationale": "Oak Hill Internal Medicine phone matches NPPES.",
+    "critique": {
+      "verdict": "pass",
+      "reasons": [
+        "Directory and NPPES agree."
+      ]
+    },
+    "status": "applied",
+    "memoryIds": []
+  }
+]

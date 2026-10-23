@@ -12,4 +12,4 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build /src/target/gateway-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8081
-ENTRYPOINT ["java", "-Dloader.path=/drivers", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]

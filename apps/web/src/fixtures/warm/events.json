@@ -1,0 +1,147 @@
+[
+  {
+    "eventId": "evt-warm-001",
+    "runId": "run-warm",
+    "ts": "2026-04-02T14:00:01.000Z",
+    "actor": "planner",
+    "type": "run_started",
+    "entityId": "run-warm",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 200,
+      "replayed": true,
+      "batch": "A",
+      "useMemory": true,
+      "listingIds": [
+        "listing:plan:L-00001",
+        "listing:plan:L-00002",
+        "listing:plan:L-00003",
+        "listing:plan:L-00004",
+        "listing:plan:L-00005",
+        "listing:plan:L-00006",
+        "listing:plan:L-00007",
+        "listing:plan:L-00008",
+        "listing:plan:L-00009",
+        "listing:plan:L-00010"
+      ]
+    }
+  },
+  {
+    "eventId": "evt-warm-002",
+    "runId": "run-warm",
+    "ts": "2026-04-02T14:00:02.000Z",
+    "actor": "planner",
+    "type": "task_created",
+    "entityId": "listing:plan:L-00001",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 140,
+      "replayed": true,
+      "listingName": "Sunrise Behavioral Group"
+    },
+    "field": "address"
+  },
+  {
+    "eventId": "evt-warm-003",
+    "runId": "run-warm",
+    "ts": "2026-04-02T14:00:03.000Z",
+    "actor": "arbiter",
+    "type": "conflict_found",
+    "entityId": "listing:plan:L-00001",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 260,
+      "replayed": true,
+      "sources": [
+        "directory",
+        "claims"
+      ],
+      "memoryIds": [
+        "mem-sunrise-address"
+      ]
+    },
+    "field": "address"
+  },
+  {
+    "eventId": "evt-warm-004",
+    "runId": "run-warm",
+    "ts": "2026-04-02T14:00:04.000Z",
+    "actor": "arbiter",
+    "type": "proposal_made",
+    "entityId": "listing:plan:L-00001",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 300,
+      "replayed": true,
+      "proposalId": "prop-l1-warm",
+      "value": "400 Harbor Ave, Springfield",
+      "source": "claims",
+      "confidence": 0.93,
+      "memoryIds": [
+        "mem-sunrise-address"
+      ]
+    },
+    "field": "address"
+  },
+  {
+    "eventId": "evt-warm-005",
+    "runId": "run-warm",
+    "ts": "2026-04-02T14:00:05.000Z",
+    "actor": "arbiter",
+    "type": "applied",
+    "entityId": "listing:plan:L-00001",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 120,
+      "replayed": true,
+      "value": "400 Harbor Ave, Springfield",
+      "source": "claims",
+      "memoryIds": [
+        "mem-sunrise-address"
+      ]
+    },
+    "field": "address"
+  },
+  {
+    "eventId": "evt-warm-006",
+    "runId": "run-warm",
+    "ts": "2026-04-02T14:00:06.000Z",
+    "actor": "risk",
+    "type": "escalated",
+    "entityId": "listing:plan:L-00002",
+    "payload": {
+      "reason": "Listed as accepting, no claims in 14 months, terminated in the roster.",
+      "confidence": 0.42
+    },
+    "field": "status"
+  },
+  {
+    "eventId": "evt-warm-007",
+    "runId": "run-warm",
+    "ts": "2026-04-02T14:00:07.000Z",
+    "actor": "risk",
+    "type": "escalated",
+    "entityId": "listing:plan:L-00006",
+    "payload": {
+      "reason": "Directory says accepting and roster says not accepting.",
+      "confidence": 0.48
+    },
+    "field": "accepting"
+  },
+  {
+    "eventId": "evt-warm-008",
+    "runId": "run-warm",
+    "ts": "2026-04-02T14:00:08.000Z",
+    "actor": "planner",
+    "type": "run_finished",
+    "entityId": "run-warm",
+    "payload": {
+      "model": "nemotron-super",
+      "latencyMs": 160,
+      "replayed": true,
+      "applied": 5,
+      "escalated": 2,
+      "memoryHits": 1
+    }
+  }
+]

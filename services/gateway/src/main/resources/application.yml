@@ -1,2 +1,10 @@
 server:
   port: 8081
+
+gna:
+  tables:
+    directory: ${GNA_TABLE_DIRECTORY:PLAN_PG.directory_listing}
+    roster: ${GNA_TABLE_ROSTER:GNA_FILES.roster}
+    claims: ${GNA_TABLE_CLAIMS:GNA_FILES.claims}
+  receipts-dir: ${GNA_RECEIPTS_DIR:./receipts}
+  samples-dir: ${GNA_SAMPLES_DIR:src/main/resources/samples}
