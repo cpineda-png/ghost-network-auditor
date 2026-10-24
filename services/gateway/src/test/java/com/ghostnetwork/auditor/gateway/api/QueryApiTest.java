@@ -2,18 +2,25 @@ package com.ghostnetwork.auditor.gateway.api;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ghostnetwork.auditor.gateway.query.QueryExecutor;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,10 +58,10 @@ class QueryApiTest {
     }
 
     @Test
-    void catalogListsThreeTemplates() throws Exception {
+    void catalogListsTemplates() throws Exception {
         mockMvc.perform(get("/catalog"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.templates.length()").value(3))
+                .andExpect(jsonPath("$.templates.length()").value(4))
                 .andExpect(jsonPath("$.templates[0].templateId").value("directory_batch"))
                 .andExpect(jsonPath("$.templates[0].sources[0]").value("PLAN_PG.directory_listing"))
                 .andExpect(jsonPath("$.templates[0].params[0].name").value("batch"))
@@ -66,7 +73,11 @@ class QueryApiTest {
                 .andExpect(jsonPath("$.templates[1].params[0].type").value("npi[]"))
                 .andExpect(jsonPath("$.templates[1].params[0].allowed").doesNotExist())
                 .andExpect(jsonPath("$.templates[2].templateId").value("claims_by_npis"))
-                .andExpect(jsonPath("$.templates[2].sources[0]").value("GNA_FILES.claims"));
+                .andExpect(jsonPath("$.templates[2].sources[0]").value("GNA_FILES.claims"))
+                .andExpect(jsonPath("$.templates[3].templateId").value("nppes_by_npis"))
+                .andExpect(jsonPath("$.templates[3].sources[0]").value("nppes_snapshot"))
+                .andExpect(jsonPath("$.templates[3].params[0].name").value("npis"))
+                .andExpect(jsonPath("$.templates[3].params[0].type").value("npi[]"));
     }
 
     @Test
@@ -146,9 +157,81 @@ class QueryApiTest {
     }
 
     @Test
-    void replayStaysNotImplemented() throws Exception {
-        mockMvc.perform(post("/replay/rcpt_0c327279b71647ed"))
-                .andExpect(status().isNotImplemented());
+    void replayMatchesUntilStoredRowsAreEdited() throws Exception {
+        String body = mockMvc.perform(post("/query").contentType(MediaType.APPLICATION_JSON).content("""
+                {"templateId":"directory_batch","params":{"batch":"A","limit":5},"runId":"run_replay","requestedBy":"lane1"}
+                """))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        JsonNode response = new ObjectMapper().readTree(body);
+        String receiptId = response.get("receipt").get("receiptId").asText();
+        String rowsHash = response.get("receipt").get("rowsHash").asText();
+        Path file = Path.of("target/query-test-receipts").resolve(receiptId + ".json");
+        byte[] stored = Files.readAllBytes(file);
+
+        String replayBody = mockMvc.perform(post("/replay/" + receiptId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.receiptId").value(receiptId))
+                .andExpect(jsonPath("$.match").value(true))
+                .andExpect(jsonPath("$.originalRowsHash").value(rowsHash))
+                .andExpect(jsonPath("$.newRowsHash").value(rowsHash))
+                .andExpect(jsonPath("$.rows[0].listing_id").value("L-00001"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        JsonNode replay = new ObjectMapper().readTree(replayBody);
+        Set<String> fields = new HashSet<>();
+        replay.fieldNames().forEachRemaining(fields::add);
+        assertEquals(Set.of("receiptId", "match", "originalRowsHash", "newRowsHash", "rows"), fields);
+        assertEquals(response.get("rows"), replay.get("rows"));
+        assertArrayEquals(stored, Files.readAllBytes(file));
+
+        ObjectNode document = (ObjectNode) new ObjectMapper().readTree(file.toFile());
+        ((ObjectNode) document.withArray("rows").get(0)).put("listing_id", "TAMPERED");
+        new ObjectMapper().writerWithDefaultPrettyPrinter().writeValue(file.toFile(), document);
+        byte[] tampered = Files.readAllBytes(file);
+
+        mockMvc.perform(post("/replay/" + receiptId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.match").value(false))
+                .andExpect(jsonPath("$.originalRowsHash").value(rowsHash))
+                .andExpect(jsonPath("$.newRowsHash").value(rowsHash))
+                .andExpect(jsonPath("$.rows[0].listing_id").value("L-00001"));
+        assertArrayEquals(tampered, Files.readAllBytes(file));
+    }
+
+    @Test
+    void unknownReceiptReplayIs404() throws Exception {
+        mockMvc.perform(post("/replay/rcpt_0123456789abcdef"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(post("/replay/not-a-receipt"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void nppesSnapshotReturnsTheSunriseLocationAndName() throws Exception {
+        mockMvc.perform(post("/query").contentType(MediaType.APPLICATION_JSON).content("""
+                {"templateId":"nppes_by_npis","params":{"npis":["8000000009"]},"runId":"run_nppes","requestedBy":"lane1"}
+                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rows.length()").value(1))
+                .andExpect(jsonPath("$.rows[0].name").value("SUNRISE BEHAVIORAL GROUP"))
+                .andExpect(jsonPath("$.rows[0].location_address_1").value("100 Harbor Sample Ave"))
+                .andExpect(jsonPath("$.receipt.sources[0]").value("nppes_snapshot"))
+                .andExpect(jsonPath("$.receipt.sql").value("SNAPSHOT nppes WHERE number IN ('8000000009')"));
+        verifyNoInteractions(queryExecutor);
+    }
+
+    @Test
+    void absentNpiReturnsNoRows() throws Exception {
+        mockMvc.perform(post("/query").contentType(MediaType.APPLICATION_JSON).content("""
+                {"templateId":"nppes_by_npis","params":{"npis":["9999999999"]},"runId":"run_absent","requestedBy":"lane1"}
+                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rows.length()").value(0))
+                .andExpect(jsonPath("$.receipt.rowCount").value(0));
     }
 
     private void rejected(String body, String message) throws Exception {

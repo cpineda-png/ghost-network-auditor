@@ -46,6 +46,10 @@ public class ReceiptStore {
     }
 
     public Receipt get(String receiptId) {
+        return load(receiptId).receipt();
+    }
+
+    public ReceiptDocument load(String receiptId) {
         Path target;
         try {
             target = path(receiptId);
@@ -60,7 +64,7 @@ public class ReceiptStore {
             if (document.receipt() == null) {
                 throw new IOException("Receipt file has no receipt");
             }
-            return document.receipt();
+            return document;
         } catch (IOException ex) {
             throw new ReceiptNotFoundException(receiptId);
         }

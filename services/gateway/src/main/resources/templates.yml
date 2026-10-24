@@ -73,3 +73,19 @@ templates:
       - { name: npis, type: "npi[]", required: true }
       - { name: fromMonth, type: month, required: true }
       - { name: toMonth, type: month, required: true }
+
+  - id: nppes_by_npis
+    description: NPPES snapshot rows for one to ten NPIs. Location fields come from the LOCATION address.
+    source: nppes_snapshot
+    columns:
+      - npi
+      - enumeration_type
+      - name
+      - taxonomy_code
+      - taxonomy_desc
+      - location_address_1
+      - location_zip
+      - location_phone
+      - mailing_address_1
+    params:
+      - { name: npis, type: "npi[]", required: true }

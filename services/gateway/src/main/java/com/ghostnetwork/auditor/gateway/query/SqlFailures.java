@@ -32,6 +32,25 @@ final class SqlFailures {
         return false;
     }
 
+    /** Connection failures worth retrying. Timeouts are excluded so one slow query cannot consume the budget. */
+    static boolean transientConnection(Throwable failure) {
+        Throwable current = failure;
+        int depth = 0;
+        while (current != null && depth < 8) {
+            if (current instanceof SQLTransientConnectionException
+                    || current instanceof SQLNonTransientConnectionException) {
+                return true;
+            }
+            Throwable next = current.getCause();
+            if (next == current) {
+                break;
+            }
+            current = next;
+            depth++;
+        }
+        return false;
+    }
+
     static String errorCode(SQLException failure) {
         Throwable current = failure;
         int depth = 0;

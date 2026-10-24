@@ -6,6 +6,7 @@ import com.ghostnetwork.auditor.gateway.api.dto.CatalogTemplate;
 import com.ghostnetwork.auditor.gateway.api.dto.QueryRequest;
 import com.ghostnetwork.auditor.gateway.api.dto.QueryResponse;
 import com.ghostnetwork.auditor.gateway.api.dto.Receipt;
+import com.ghostnetwork.auditor.gateway.api.dto.ReplayResponse;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
@@ -30,6 +31,8 @@ public class QueryService {
     private final QueryExecutor executor;
     private final SampleStore samples;
     private final ReceiptStore receipts;
+    private final NppesSnapshot nppes;
+    private final QueryRetries retries;
     private final Environment environment;
 
     public QueryService(
@@ -39,6 +42,8 @@ public class QueryService {
             QueryExecutor executor,
             SampleStore samples,
             ReceiptStore receipts,
+            NppesSnapshot nppes,
+            QueryRetries retries,
             Environment environment
     ) {
         this.templates = templates;
@@ -47,6 +52,8 @@ public class QueryService {
         this.executor = executor;
         this.samples = samples;
         this.receipts = receipts;
+        this.nppes = nppes;
+        this.retries = retries;
         this.environment = environment;
     }
 
@@ -62,7 +69,7 @@ public class QueryService {
                     template.id(),
                     template.description(),
                     List.copyOf(params),
-                    List.of(sqlBuilder.sourceTable(template.source()))));
+                    sourcesFor(template)));
         }
         return new CatalogResponse(List.copyOf(listed));
     }
@@ -74,11 +81,10 @@ public class QueryService {
         requireText(request.runId(), "runId");
         requireText(request.requestedBy(), "requestedBy");
         ParamValidator.ValidatedQuery validated = validator.validate(request.templateId(), request.params());
-        SqlBuilder.BoundQuery bound = sqlBuilder.build(validated.template(), validated.params());
         long started = System.nanoTime();
-        Fetched fetched = fetch(validated, bound);
+        Executed executed = execute(validated);
         long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started);
-        List<Map<String, String>> rows = fetched.rows();
+        List<Map<String, String>> rows = executed.fetched().rows();
         List<Object> preview = new ArrayList<>();
         for (int i = 0; i < Math.min(20, rows.size()); i++) {
             preview.add(rows.get(i));
@@ -87,21 +93,78 @@ public class QueryService {
                 ReceiptIds.receiptId(validated.template().id(), validated.canonicalParams(), request.runId()),
                 request.runId(),
                 validated.template().id(),
-                bound.displaySql(),
+                executed.sql(),
                 validated.params(),
-                List.of(sqlBuilder.sourceTable(validated.template().source())),
+                executed.sources(),
                 rows.size(),
                 ReceiptIds.rowsHash(CanonicalJson.of(rows)),
                 preview,
                 DateTimeFormatter.ISO_INSTANT.format(Instant.now()),
-                fetched.mode(),
+                executed.fetched().mode(),
                 durationMs);
-        receipts.save(receipt, fetched.columns(), rows);
-        return new QueryResponse(receipt, fetched.columns(), new ArrayList<>(rows));
+        receipts.save(receipt, executed.fetched().columns(), rows);
+        return new QueryResponse(receipt, executed.fetched().columns(), new ArrayList<>(rows));
+    }
+
+    public ReplayResponse replay(String receiptId) {
+        ReceiptStore.ReceiptDocument document = receipts.load(receiptId);
+        Receipt stored = document.receipt();
+        boolean intact = intact(document);
+        ParamValidator.ValidatedQuery validated = validator.validate(stored.templateId(), stored.params());
+        Executed executed = execute(validated);
+        String newRowsHash = ReceiptIds.rowsHash(CanonicalJson.of(executed.fetched().rows()));
+        boolean match = intact && newRowsHash.equals(stored.rowsHash());
+        return new ReplayResponse(
+                receiptId,
+                match,
+                stored.rowsHash(),
+                newRowsHash,
+                new ArrayList<>(executed.fetched().rows()));
     }
 
     public Receipt receipt(String receiptId) {
         return receipts.get(receiptId);
+    }
+
+    private Executed execute(ParamValidator.ValidatedQuery validated) {
+        if (isSnapshot(validated.template())) {
+            List<String> npis = npis(validated);
+            List<Map<String, String>> rows = nppes.rows(npis);
+            String mode = sampleMode() ? "replayed" : "live";
+            return new Executed(
+                    NppesSnapshot.describe(npis),
+                    List.of("nppes_snapshot"),
+                    new Fetched(validated.template().columns(), rows, mode));
+        }
+        SqlBuilder.BoundQuery bound = sqlBuilder.build(validated.template(), validated.params());
+        return new Executed(
+                bound.displaySql(),
+                List.of(sqlBuilder.sourceTable(validated.template().source())),
+                fetch(validated, bound));
+    }
+
+    private List<String> sourcesFor(TemplateDefinition template) {
+        if (isSnapshot(template)) {
+            return List.of("nppes_snapshot");
+        }
+        return List.of(sqlBuilder.sourceTable(template.source()));
+    }
+
+    private static boolean isSnapshot(TemplateDefinition template) {
+        return "nppes_snapshot".equals(template.source());
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> npis(ParamValidator.ValidatedQuery validated) {
+        return (List<String>) validated.params().get("npis");
+    }
+
+    private static boolean intact(ReceiptStore.ReceiptDocument document) {
+        if (document.rows() == null || document.receipt().rowsHash() == null) {
+            return false;
+        }
+        String recomputed = ReceiptIds.rowsHash(CanonicalJson.of(document.rows()));
+        return document.receipt().rowsHash().equals(recomputed);
     }
 
     private Fetched fetch(ParamValidator.ValidatedQuery validated, SqlBuilder.BoundQuery bound) {
@@ -111,7 +174,7 @@ public class QueryService {
             return new Fetched(sample.columns(), sample.rows(), "replayed");
         }
         try {
-            QueryResult result = executor.execute(bound);
+            QueryResult result = retries.run(() -> executor.execute(bound));
             log.info(
                     "Query {} completed using {}",
                     validated.template().id(),
@@ -129,14 +192,13 @@ public class QueryService {
             throw ex.withTemplate(validated.template().id());
         } catch (QueryUnavailableException ex) {
             Optional<SampleStore.Sample> sample = recordedSample(validated);
-            log.warn(
-                    "Live query for {} did not complete ({}){}",
-                    validated.template().id(),
-                    failureReason(ex),
-                    sample.isPresent() ? "; serving the recorded sample" : "");
             if (sample.isEmpty()) {
                 throw new QueryUnavailableException("Zetaris query failed and no sample is recorded");
             }
+            log.warn(
+                    "FALLBACK template={} reason={} mode=replayed",
+                    validated.template().id(),
+                    reasonClass(ex));
             return new Fetched(sample.get().columns(), sample.get().rows(), "replayed");
         }
     }
@@ -153,19 +215,21 @@ public class QueryService {
         return Boolean.parseBoolean(environment.getProperty("RECORD_MODE"));
     }
 
-    private static String failureReason(QueryUnavailableException failure) {
-        Throwable cause = failure.getCause();
-        if (cause instanceof SQLException sql) {
-            String state = sql.getSQLState();
-            if (state == null || state.isBlank()) {
-                return sql.getClass().getSimpleName();
+    static String reasonClass(Throwable failure) {
+        Throwable current = failure;
+        int depth = 0;
+        while (current != null && depth < 8) {
+            if (current instanceof SQLException) {
+                return current.getClass().getSimpleName();
             }
-            return sql.getClass().getSimpleName() + " sqlState=" + state;
+            Throwable next = current.getCause();
+            if (next == current) {
+                break;
+            }
+            current = next;
+            depth++;
         }
-        if (cause == null) {
-            return failure.getMessage();
-        }
-        return cause.getClass().getSimpleName();
+        return failure.getClass().getSimpleName();
     }
 
     private static void requireText(String value, String name) {
@@ -175,5 +239,8 @@ public class QueryService {
     }
 
     private record Fetched(List<String> columns, List<Map<String, String>> rows, String mode) {
+    }
+
+    private record Executed(String sql, List<String> sources, Fetched fetched) {
     }
 }

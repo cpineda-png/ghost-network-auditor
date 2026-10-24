@@ -8,3 +8,4 @@ gna:
     claims: ${GNA_TABLE_CLAIMS:GNA_FILES.claims}
   receipts-dir: ${GNA_RECEIPTS_DIR:./receipts}
   samples-dir: ${GNA_SAMPLES_DIR:src/main/resources/samples}
+  nppes-snapshot: ${GNA_NPPES_SNAPSHOT:}

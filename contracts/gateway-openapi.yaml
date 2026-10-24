@@ -74,12 +74,26 @@ paths:
           schema:
             type: string
       responses:
-        "501":
-          description: Not implemented
+        "200":
+          description: Re-ran the stored template. match is false when the new rows differ or the stored rows were edited.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReplayResponse"
+        "404":
+          description: Receipt does not exist
+        "502":
+          description: The database rejected the query
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueryError"
+        "503":
+          description: The driver could not connect or the query timed out, and no sample recording exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
   /receipts/{receiptId}:
     get:
       summary: Fetch a stored receipt
