@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   catalogResponseSchema,
+  queryErrorSchema,
   queryResponseSchema,
   receiptSchema,
   type CatalogResponse,
@@ -23,10 +24,16 @@ export type GatewayClientOptions = {
   recordDir?: string;
 };
 
+export type GatewayFailure = {
+  error: string;
+  sqlState: string | null;
+};
+
 export class GatewayError extends Error {
   constructor(
     message: string,
     readonly status?: number,
+    readonly failure?: GatewayFailure,
   ) {
     super(message);
     this.name = "GatewayError";
@@ -94,6 +101,14 @@ export class HttpGateway implements Gateway {
           body: payload === undefined ? undefined : JSON.stringify(payload),
           signal: controller.signal,
         });
+        if (response.status === 502 || response.status === 503) {
+          const failure = await readQueryFailure(response);
+          throw new GatewayError(
+            failure?.error ?? `gateway ${method} ${path} failed with ${response.status}`,
+            response.status,
+            failure,
+          );
+        }
         if (response.status === 429 || response.status >= 500) {
           lastError = new GatewayError(`gateway ${method} ${path} failed with ${response.status}`, response.status);
           if (attempt === RETRY_DELAYS_MS.length) throw lastError;
@@ -106,7 +121,7 @@ export class HttpGateway implements Gateway {
         const json: unknown = await response.json();
         return schema.parse(json);
       } catch (error) {
-        if (error instanceof GatewayError && error.status !== undefined && error.status !== 429 && error.status < 500) {
+        if (error instanceof GatewayError && error.status !== undefined && isTerminalStatus(error.status)) {
           throw error;
         }
         if (error instanceof ZodError) {
@@ -121,6 +136,27 @@ export class HttpGateway implements Gateway {
     }
     throw lastError;
   }
+}
+
+function isTerminalStatus(status: number): boolean {
+  return status === 502 || status === 503 || (status !== 429 && status < 500);
+}
+
+async function readQueryFailure(response: Response): Promise<GatewayFailure | undefined> {
+  let json: unknown;
+  try {
+    json = await response.json();
+  } catch {
+    return undefined;
+  }
+  const parsed = queryErrorSchema.safeParse(json);
+  if (parsed.success) {
+    return { error: parsed.data.error, sqlState: parsed.data.sqlState };
+  }
+  if (json && typeof json === "object" && "message" in json && typeof json.message === "string") {
+    return { error: json.message, sqlState: null };
+  }
+  return undefined;
 }
 
 function sleep(ms: number): Promise<void> {

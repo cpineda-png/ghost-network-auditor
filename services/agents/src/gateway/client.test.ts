@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { catalogResponseSchema, queryResponseSchema } from "contracts";
-import { HttpGateway } from "./client.js";
+import { GatewayError, HttpGateway } from "./client.js";
 import { MockGateway } from "./mock.js";
 import { makeQueryResponse } from "./receipt.js";
 
@@ -48,6 +48,43 @@ describe("HttpGateway", () => {
     await vi.runAllTimersAsync();
     await expect(pending).resolves.toEqual(valid);
     expect(fetchImpl).toHaveBeenCalledTimes(4);
+  });
+
+  it("surfaces error and sqlState from a 502 without retrying", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({ error: "table missing", templateId: "directory_batch", sqlState: "42S02" }),
+        { status: 502, headers: { "content-type": "application/json" } },
+      ),
+    );
+    const client = new HttpGateway({ fetchImpl, baseUrl: "http://gateway" });
+    await expect(client.query("directory_batch", { batch: "A" }, "run-1")).rejects.toMatchObject({
+      status: 502,
+      failure: { error: "table missing", sqlState: "42S02" },
+    });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("surfaces the message from a 503 without retrying", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ message: "Zetaris query failed and no sample is recorded" }), {
+        status: 503,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    const client = new HttpGateway({ fetchImpl, baseUrl: "http://gateway" });
+    const error = await client.query("directory_batch", { batch: "A" }, "run-1").then(
+      () => {
+        throw new Error("expected a 503");
+      },
+      (caught: unknown) => caught,
+    );
+    expect(error).toBeInstanceOf(GatewayError);
+    expect(error).toMatchObject({
+      status: 503,
+      failure: { error: "Zetaris query failed and no sample is recorded", sqlState: null },
+    });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 });
 

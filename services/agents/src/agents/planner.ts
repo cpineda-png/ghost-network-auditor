@@ -30,6 +30,7 @@ export type PlanResult = {
   latencyMs: number;
   replayed: boolean;
   rankings: PlannerOutput;
+  firstListing: { listing_id: string; phone: string } | null;
 };
 
 export function chunkRows<T>(rows: T[], size = CHUNK_SIZE): T[][] {
@@ -58,17 +59,7 @@ export async function plan(input: {
     payload: { scope: request.scope, useMemory },
   });
 
-  const query = await gateway.query(
-    "directory_batch",
-    {
-      county: request.scope.county,
-      specialty: request.scope.specialty,
-      batch: request.scope.batch,
-      limit: 10,
-      offset: 0,
-    },
-    runId,
-  );
+  const query = await gateway.query("directory_batch", directoryParams(request.scope), runId);
 
   const chunks = chunkRows(query.rows);
   let tasks = 0;
@@ -128,7 +119,28 @@ export async function plan(input: {
     latencyMs: llmResult.latencyMs,
     replayed: llmResult.replayed,
     rankings: llmResult.data,
+    firstListing: readFirstListing(query.rows),
   };
+}
+
+function directoryParams(scope: { batch: string; county?: string; specialty?: string }): Record<string, unknown> {
+  const params: Record<string, unknown> = {
+    batch: scope.batch,
+    limit: 10,
+    offset: 0,
+  };
+  if (typeof scope.county === "string") params.county = scope.county;
+  if (typeof scope.specialty === "string") params.specialty = scope.specialty;
+  return params;
+}
+
+function readFirstListing(rows: unknown[]): { listing_id: string; phone: string } | null {
+  const row = rows[0];
+  if (!row || typeof row !== "object") return null;
+  const listing_id = (row as { listing_id?: unknown }).listing_id;
+  const phone = (row as { phone?: unknown }).phone;
+  if (typeof listing_id !== "string" || typeof phone !== "string") return null;
+  return { listing_id, phone };
 }
 
 function plannerMessages(runId: string, receiptId: string, chunks: unknown[][], templateIds: TemplateId[]) {
