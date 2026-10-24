@@ -4,7 +4,7 @@ import type { LlmClient } from "./llm/nemotron.js";
 import { runSmoke } from "./smoke.js";
 
 describe("smoke", () => {
-  it("prints three lines with MockGateway and a replayed planner call", async () => {
+  it("prints four lines with MockGateway and a replayed planner call", async () => {
     const llm: LlmClient = {
       chatJson: vi.fn().mockResolvedValue({
         data: {
@@ -22,10 +22,11 @@ describe("smoke", () => {
     });
     try {
       const lines = await runSmoke({ gateway: new MockGateway(), llm });
-      expect(lines).toHaveLength(3);
+      expect(lines).toHaveLength(4);
       expect(lines[0]).toMatch(/^ZETARIS receipt=.+ rows=10 mode=replayed$/);
       expect(lines[1]).toMatch(/^HMEM write memoryId=.+$/);
       expect(lines[2]).toMatch(/^NEMOTRON call model=nemotron-super tasks=3 replayed=true$/);
+      expect(lines[3]).toBe("GATEWAY url=mock");
       expect(logs).toEqual(lines);
     } finally {
       spy.mockRestore();
