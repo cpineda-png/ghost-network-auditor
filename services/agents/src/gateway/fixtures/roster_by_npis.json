@@ -6,20 +6,68 @@
     "sql": "-- template roster_by_npis",
     "params": {
       "npis": [
-        "1000000000"
+        "8000000009",
+        "8000000017",
+        "8000000025",
+        "8000000033",
+        "8000000041",
+        "8000000058",
+        "8000000066",
+        "8000000074",
+        "8000000082",
+        "8000000090"
       ]
     },
     "sources": [
       "roster"
     ],
-    "rowCount": 1,
-    "rowsHash": "58f265c86fed0565326cf9ba62f33814c2621cd38843f7fa2dd3aba6a8d83eb4",
+    "rowCount": 10,
+    "rowsHash": "68901da359e916a1424b9f0c6d47946d5501a9280e671873402785aaa576ca59",
     "rowsPreview": [
       {
-        "npi": "1000000000",
-        "group_name": "North Clinic",
-        "specialty": "family medicine",
-        "status": "active"
+        "npi": "8000000009",
+        "group_name": "Sunrise Behavioral Group",
+        "specialty": "Clinic/Center, Mental Health",
+        "status": "active",
+        "address_line1": "100 Harbor Sample Ave",
+        "zip": "11201",
+        "phone": "718-555-0100"
+      },
+      {
+        "npi": "8000000017",
+        "group_name": "Sunrise Behavioral Group",
+        "specialty": "Psychologist",
+        "status": "active",
+        "address_line1": "100 Harbor Sample Ave",
+        "zip": "11201",
+        "phone": "718-555-0101"
+      },
+      {
+        "npi": "8000000025",
+        "group_name": "Sunrise Behavioral Group",
+        "specialty": "Nurse Practitioner, Psychiatric/Mental Health",
+        "status": "active",
+        "address_line1": "100 Harbor Sample Ave",
+        "zip": "11201",
+        "phone": "718-555-0102"
+      },
+      {
+        "npi": "8000000033",
+        "group_name": "Sunrise Behavioral Group",
+        "specialty": "Counselor, Mental Health",
+        "status": "active",
+        "address_line1": "100 Harbor Sample Ave",
+        "zip": "11201",
+        "phone": "718-555-0103"
+      },
+      {
+        "npi": "8000000041",
+        "group_name": "Sunrise Behavioral Group",
+        "specialty": "Psychiatry",
+        "status": "active",
+        "address_line1": "100 Harbor Sample Ave",
+        "zip": "11201",
+        "phone": "718-555-0104"
       }
     ],
     "executedAt": "2026-01-15T00:00:00.000Z",
@@ -30,14 +78,101 @@
     "npi",
     "group_name",
     "specialty",
-    "status"
+    "status",
+    "address_line1",
+    "zip",
+    "phone"
   ],
   "rows": [
     {
-      "npi": "1000000000",
-      "group_name": "North Clinic",
-      "specialty": "family medicine",
-      "status": "active"
+      "npi": "8000000009",
+      "group_name": "Sunrise Behavioral Group",
+      "specialty": "Clinic/Center, Mental Health",
+      "status": "active",
+      "address_line1": "100 Harbor Sample Ave",
+      "zip": "11201",
+      "phone": "718-555-0100"
+    },
+    {
+      "npi": "8000000017",
+      "group_name": "Sunrise Behavioral Group",
+      "specialty": "Psychologist",
+      "status": "active",
+      "address_line1": "100 Harbor Sample Ave",
+      "zip": "11201",
+      "phone": "718-555-0101"
+    },
+    {
+      "npi": "8000000025",
+      "group_name": "Sunrise Behavioral Group",
+      "specialty": "Nurse Practitioner, Psychiatric/Mental Health",
+      "status": "active",
+      "address_line1": "100 Harbor Sample Ave",
+      "zip": "11201",
+      "phone": "718-555-0102"
+    },
+    {
+      "npi": "8000000033",
+      "group_name": "Sunrise Behavioral Group",
+      "specialty": "Counselor, Mental Health",
+      "status": "active",
+      "address_line1": "100 Harbor Sample Ave",
+      "zip": "11201",
+      "phone": "718-555-0103"
+    },
+    {
+      "npi": "8000000041",
+      "group_name": "Sunrise Behavioral Group",
+      "specialty": "Psychiatry",
+      "status": "active",
+      "address_line1": "100 Harbor Sample Ave",
+      "zip": "11201",
+      "phone": "718-555-0104"
+    },
+    {
+      "npi": "8000000058",
+      "group_name": "Sunrise Behavioral Group",
+      "specialty": "Psychologist",
+      "status": "active",
+      "address_line1": "100 Harbor Sample Ave",
+      "zip": "11201",
+      "phone": "718-555-0105"
+    },
+    {
+      "npi": "8000000066",
+      "group_name": "Sunrise Behavioral Group",
+      "specialty": "Nurse Practitioner, Psychiatric/Mental Health",
+      "status": "active",
+      "address_line1": "100 Harbor Sample Ave",
+      "zip": "11201",
+      "phone": "718-555-0106"
+    },
+    {
+      "npi": "8000000074",
+      "group_name": "Sunrise Behavioral Group",
+      "specialty": "Counselor, Mental Health",
+      "status": "active",
+      "address_line1": "100 Harbor Sample Ave",
+      "zip": "11201",
+      "phone": "718-555-0107"
+    },
+    {
+      "npi": "8000000082",
+      "group_name": "Sunrise Behavioral Group",
+      "specialty": "Psychiatry",
+      "status": "active",
+      "address_line1": "100 Harbor Sample Ave",
+      "zip": "11201",
+      "phone": "718-555-0108"
+    },
+    {
+      "npi": "8000000090",
+      "group_name": "Kings Sample Group",
+      "specialty": "Psychologist",
+      "status": "active",
+      "address_line1": "309 Stale Sample St",
+      "zip": "11211",
+      "phone": "718-555-0199"
     }
   ]
 }

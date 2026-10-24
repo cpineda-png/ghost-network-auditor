@@ -6,6 +6,7 @@ import {
   queryErrorSchema,
   queryResponseSchema,
   receiptSchema,
+  replayResponseSchema,
   type CatalogResponse,
   type QueryResponse,
   type Receipt,
@@ -82,6 +83,10 @@ export class HttpGateway implements Gateway {
 
   catalog(): Promise<CatalogResponse> {
     return this.requestJson("GET", "/catalog", undefined, catalogResponseSchema);
+  }
+
+  replay(receiptId: string) {
+    return this.requestJson("POST", `/replay/${encodeURIComponent(receiptId)}`, {}, replayResponseSchema);
   }
 
   private async requestJson<T>(

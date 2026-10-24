@@ -31,6 +31,7 @@ export type PlanResult = {
   replayed: boolean;
   rankings: PlannerOutput;
   firstListing: { listing_id: string; phone: string } | null;
+  directoryRows: unknown[];
 };
 
 export function chunkRows<T>(rows: T[], size = CHUNK_SIZE): T[][] {
@@ -120,6 +121,7 @@ export async function plan(input: {
     replayed: llmResult.replayed,
     rankings: llmResult.data,
     firstListing: readFirstListing(query.rows),
+    directoryRows: query.rows,
   };
 }
 
