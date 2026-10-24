@@ -1,0 +1,43 @@
+{
+  "receipt": {
+    "receiptId": "receipt-roster-fixture",
+    "runId": "fixture",
+    "templateId": "roster_by_npis",
+    "sql": "-- template roster_by_npis",
+    "params": {
+      "npis": [
+        "1000000000"
+      ]
+    },
+    "sources": [
+      "roster"
+    ],
+    "rowCount": 1,
+    "rowsHash": "58f265c86fed0565326cf9ba62f33814c2621cd38843f7fa2dd3aba6a8d83eb4",
+    "rowsPreview": [
+      {
+        "npi": "1000000000",
+        "group_name": "North Clinic",
+        "specialty": "family medicine",
+        "status": "active"
+      }
+    ],
+    "executedAt": "2026-01-15T00:00:00.000Z",
+    "mode": "replayed",
+    "durationMs": 12
+  },
+  "columns": [
+    "npi",
+    "group_name",
+    "specialty",
+    "status"
+  ],
+  "rows": [
+    {
+      "npi": "1000000000",
+      "group_name": "North Clinic",
+      "specialty": "family medicine",
+      "status": "active"
+    }
+  ]
+}
