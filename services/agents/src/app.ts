@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import express from "express";
 import type { GatewayHealth, RunRequest } from "contracts";
-import { gatewayHealthSchema, runRequestSchema } from "contracts";
-import { plan } from "./agents/planner.js";
+import { gatewayHealthSchema, rulingSchema, runRequestSchema } from "contracts";
+import { executeRun, RunBook } from "./agents/run.js";
 import { createGateway } from "./gateway/client.js";
 import type { Gateway } from "./gateway/types.js";
 import { createNemotronClient, type LlmClient } from "./llm/nemotron.js";
@@ -16,9 +16,8 @@ export type AppDeps = {
   hmem?: MeterlessHMem;
   world?: GnaWorldModel;
   llm?: LlmClient;
+  runs?: RunBook;
 };
-
-const TODO = { error: "TODO" };
 
 export function createApp(deps: AppDeps = {}) {
   const app = express();
@@ -30,7 +29,7 @@ export function createApp(deps: AppDeps = {}) {
   const hmem = deps.hmem ?? new MeterlessHMem();
   const world = deps.world ?? new GnaWorldModel();
   const llm = deps.llm ?? createNemotronClient();
-  void hmem;
+  const runs = deps.runs ?? new RunBook();
 
   app.get("/health", async (_req, res) => {
     res.json({
@@ -49,32 +48,64 @@ export function createApp(deps: AppDeps = {}) {
     const runId = randomUUID();
     const request: RunRequest = { ...parsed.data, useMemory: parsed.data.useMemory ?? true };
     res.json({ runId });
-    void plan({ request, runId, gateway, world, llm }).catch(async (error) => {
+    const task = executeRun({ request, runId, gateway, world, hmem, llm }).catch(async (error) => {
       await world.append({
         runId,
         ts: new Date().toISOString(),
         actor: "planner",
         type: "escalated",
         entityId: `run:${runId}`,
-        payload: { error: error instanceof Error ? error.message : "planner failed" },
+        payload: { error: error instanceof Error ? error.message : "run failed" },
       });
+      throw error;
     });
+    runs.track(runId, task);
   });
 
-  app.get("/runs/:id/cards", (_req, res) => {
-    res.status(501).json(TODO);
+  app.get("/runs/:id/cards", (req, res) => {
+    const outcome = runs.get(req.params.id);
+    if (!outcome) {
+      res.status(404).json({ error: "run not ready" });
+      return;
+    }
+    res.json(outcome.cards);
   });
-  app.post("/rulings", (_req, res) => {
-    res.status(501).json(TODO);
+  app.post("/rulings", async (req, res) => {
+    const parsed = rulingSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "invalid Ruling" });
+      return;
+    }
+    const stored = await hmem.recordRuling(parsed.data);
+    await world.append({
+      runId: parsed.data.runId,
+      ts: new Date().toISOString(),
+      actor: "human",
+      type: "ruling_recorded",
+      entityId: parsed.data.listingId,
+      field: parsed.data.field,
+      payload: { memoryId: stored.memoryId },
+    });
+    res.json(stored);
   });
-  app.get("/memory/trust", (_req, res) => {
-    res.status(501).json(TODO);
+  app.get("/memory/trust", async (_req, res) => {
+    res.json(await hmem.trust());
   });
-  app.get("/runs/:id/report", (_req, res) => {
-    res.status(501).json(TODO);
+  app.get("/runs/:id/report", (req, res) => {
+    const outcome = runs.get(req.params.id);
+    if (!outcome) {
+      res.status(404).json({ error: "run not ready" });
+      return;
+    }
+    res.json(outcome.report);
   });
-  app.get("/runs/:id/diff.csv", (_req, res) => {
-    res.status(501).json(TODO);
+  app.get("/runs/:id/diff.csv", (req, res) => {
+    const outcome = runs.get(req.params.id);
+    if (!outcome) {
+      res.status(404).json({ error: "run not ready" });
+      return;
+    }
+    res.type("text/csv").send(outcome.diff);
   });
 
   app.get("/runs/:id/events", async (req, res) => {

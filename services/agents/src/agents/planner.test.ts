@@ -39,7 +39,7 @@ describe("planner chunks", () => {
     });
     const created = (await world.eventsForRun("run-plan")).filter((event) => event.type === "task_created");
     expect(result.rows).toBe(21);
-    expect(result.firstListing).toEqual({ listing_id: "L-00001", phone: "217-555-00001" });
+    expect(result.firstListing).toEqual({ listing_id: "L-00001", phone: "718-555-0100" });
     expect(gateway.query).toHaveBeenCalledWith(
       "directory_batch",
       { batch: "A", limit: 10, offset: 0 },

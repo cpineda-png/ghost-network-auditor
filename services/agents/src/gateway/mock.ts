@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { CatalogResponse, QueryResponse, Receipt } from "contracts";
+import type { CatalogResponse, QueryResponse, Receipt, ReplayResponse } from "contracts";
 import { CATALOG } from "./catalog.js";
 import { makeQueryResponse } from "./receipt.js";
 import type { Gateway } from "./types.js";
@@ -15,6 +15,11 @@ function loadFixture(name: string): QueryResponse {
 
 export class MockGateway implements Gateway {
   private readonly receipts = new Map<string, Receipt>();
+  private readonly tampered = new Set<string>();
+
+  tamper(receiptId: string): void {
+    this.tampered.add(receiptId);
+  }
 
   async query(templateId: string, params: Record<string, unknown>, runId: string): Promise<QueryResponse> {
     const fixtureName =
@@ -61,5 +66,17 @@ export class MockGateway implements Gateway {
 
   async catalog(): Promise<CatalogResponse> {
     return CATALOG;
+  }
+
+  async replay(receiptId: string): Promise<ReplayResponse> {
+    const receipt = await this.getReceipt(receiptId);
+    const match = !this.tampered.has(receiptId);
+    return {
+      receiptId,
+      match,
+      originalRowsHash: receipt.rowsHash,
+      newRowsHash: match ? receipt.rowsHash : `${receipt.rowsHash}-tampered`,
+      rows: receipt.rowsPreview,
+    };
   }
 }
