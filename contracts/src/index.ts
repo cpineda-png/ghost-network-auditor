@@ -100,7 +100,7 @@ export const gatewayHealthSchema: z.ZodType<GatewayHealth> = z.object({
   mode: z.enum(["live", "sample"]),
 });
 
-export const TEMPLATE_IDS = ["directory_batch", "roster_by_npis", "claims_by_npis"] as const;
+export const TEMPLATE_IDS = ["directory_batch", "roster_by_npis", "claims_by_npis", "nppes_by_npis"] as const;
 
 export type TemplateId = (typeof TEMPLATE_IDS)[number];
 export const templateIdSchema = z.enum(TEMPLATE_IDS);

@@ -32,11 +32,13 @@ services:
       GNA_TABLE_CLAIMS: ${GNA_TABLE_CLAIMS:-GNA_FILES.claims}
       GNA_RECEIPTS_DIR: /app/receipts
       GNA_SAMPLES_DIR: /app/samples
+      GNA_NPPES_SNAPSHOT: /app/nppes/nppes_snapshot.json
       RECORD_MODE: ${RECORD_MODE:-false}
     volumes:
       - ./drivers:/drivers:ro
       - ./services/gateway/src/main/resources/samples:/app/samples
       - ./receipts:/app/receipts
+      - ./data/sample/nppes_snapshot.json:/app/nppes/nppes_snapshot.json:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:

@@ -12,6 +12,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class ZetarisConnections implements ConnectionFactory {
 
+    static final int LOGIN_TIMEOUT_SECONDS = 5;
+
     private static final Logger log = LoggerFactory.getLogger(ZetarisConnections.class);
 
     private final Environment environment;
@@ -36,6 +38,7 @@ public class ZetarisConnections implements ConnectionFactory {
         if (username == null || username.isBlank() || password == null || password.isBlank()) {
             log.warn("Zetaris username or password is missing");
         }
+        DriverManager.setLoginTimeout(LOGIN_TIMEOUT_SECONDS);
         try {
             return DriverManager.getConnection(url, username, password);
         } catch (SQLException ex) {

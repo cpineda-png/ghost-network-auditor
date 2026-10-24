@@ -6,8 +6,6 @@ import com.ghostnetwork.auditor.gateway.api.dto.QueryResponse;
 import com.ghostnetwork.auditor.gateway.api.dto.Receipt;
 import com.ghostnetwork.auditor.gateway.api.dto.ReplayResponse;
 import com.ghostnetwork.auditor.gateway.query.QueryService;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,8 +32,8 @@ public class QueryController {
     }
 
     @PostMapping("/replay/{receiptId}")
-    public ResponseEntity<ReplayResponse> replay(@PathVariable String receiptId) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    public ReplayResponse replay(@PathVariable String receiptId) {
+        return queryService.replay(receiptId);
     }
 
     @GetMapping("/receipts/{receiptId}")

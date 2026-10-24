@@ -10,10 +10,16 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ghostnetwork.auditor.gateway.api.dto.QueryRequest;
 import com.ghostnetwork.auditor.gateway.api.dto.QueryResponse;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
@@ -22,10 +28,16 @@ import java.sql.SQLException;
 import java.sql.SQLNonTransientConnectionException;
 import java.sql.SQLTimeoutException;
 import java.sql.SQLTransientConnectionException;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.core.env.Environment;
 
@@ -215,7 +227,118 @@ class QueryServiceTest {
         assertFalse(stored.get("receipt").has("rows"));
     }
 
+    @Test
+    void transientConnectionRetriesWithOneTwoAndFourSecondBackoff() {
+        ManualClock clock = new ManualClock();
+        List<Long> delays = new ArrayList<>();
+        QueryRetries retries = new QueryRetries(clock, millis -> {
+            delays.add(millis);
+            clock.advance(millis);
+        });
+        AtomicInteger calls = new AtomicInteger();
+        QueryExecutor executor = query -> {
+            calls.incrementAndGet();
+            throw new ConnectionFailedException("down", new SQLTransientConnectionException("reset"));
+        };
+        Logger logger = (Logger) LoggerFactory.getLogger(QueryService.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            QueryService service = service(executor, "false", "false", retries, emptySnapshot());
+            QueryResponse response = service.query(request("A", 5, "run_retry"));
+            assertEquals("replayed", response.receipt().mode());
+            assertEquals(4, calls.get());
+            assertEquals(List.of(1_000L, 2_000L, 4_000L), delays);
+            List<String> fallbacks = appender.list.stream()
+                    .filter(event -> event.getLevel() == Level.WARN)
+                    .map(ILoggingEvent::getFormattedMessage)
+                    .filter(message -> message.startsWith("FALLBACK"))
+                    .toList();
+            assertEquals(
+                    List.of("FALLBACK template=directory_batch reason=SQLTransientConnectionException mode=replayed"),
+                    fallbacks);
+        } finally {
+            logger.detachAppender(appender);
+        }
+    }
+
+    @Test
+    void retryDeadlineStopsBeforeTheNextWaitWouldPassFifteenSeconds() {
+        ManualClock clock = new ManualClock();
+        List<Long> delays = new ArrayList<>();
+        QueryRetries retries = new QueryRetries(clock, millis -> {
+            delays.add(millis);
+            clock.advance(millis);
+        });
+        AtomicInteger calls = new AtomicInteger();
+        QueryExecutor executor = query -> {
+            calls.incrementAndGet();
+            clock.advance(6_000);
+            throw new ConnectionFailedException("down", new SQLTransientConnectionException("reset"));
+        };
+        QueryService service = service(executor, "false", "false", retries, emptySnapshot());
+        QueryUnavailableException failure = assertThrows(
+                QueryUnavailableException.class,
+                () -> service.query(request("B", 1, "run_budget")));
+        assertEquals("Zetaris query failed and no sample is recorded", failure.getMessage());
+        assertEquals(3, calls.get());
+        assertEquals(List.of(1_000L, 2_000L), delays);
+    }
+
+    @Test
+    void queryTimeoutIsNotRetried() {
+        AtomicInteger calls = new AtomicInteger();
+        QueryExecutor executor = query -> {
+            calls.incrementAndGet();
+            throw new ConnectionFailedException("down", new SQLTimeoutException("slow"));
+        };
+        QueryService service = service(executor, "false", "false");
+        QueryResponse response = service.query(request("A", 5, "run_timeout_once"));
+        assertEquals(1, calls.get());
+        assertEquals("replayed", response.receipt().mode());
+    }
+
+    @Test
+    void missingSnapshotWarnsOnceAndNppesQueriesReturn503() {
+        Logger logger = (Logger) LoggerFactory.getLogger(NppesSnapshot.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            NppesSnapshot snapshot = new NppesSnapshot(mapper, temp.resolve("missing.json").toString(), temp);
+            QueryService service = service(mock(QueryExecutor.class), "true", "false", retriesInstant(), snapshot);
+            QueryUnavailableException failure = assertThrows(
+                    QueryUnavailableException.class,
+                    () -> service.query(new QueryRequest(
+                            "nppes_by_npis",
+                            Map.of("npis", List.of("8000000009")),
+                            "run_missing_snapshot",
+                            "lane1")));
+            assertEquals("NPPES snapshot is not available", failure.getMessage());
+            List<String> warnings = appender.list.stream()
+                    .filter(event -> event.getLevel() == Level.WARN)
+                    .map(ILoggingEvent::getFormattedMessage)
+                    .toList();
+            assertEquals(1, warnings.size());
+            assertTrue(warnings.get(0).contains("missing"));
+            assertTrue(warnings.get(0).contains("missing.json"));
+        } finally {
+            logger.detachAppender(appender);
+        }
+    }
+
     private QueryService service(QueryExecutor executor, String sampleMode, String recordMode) {
+        return service(executor, sampleMode, recordMode, retriesInstant(), emptySnapshot());
+    }
+
+    private QueryService service(
+            QueryExecutor executor,
+            String sampleMode,
+            String recordMode,
+            QueryRetries retries,
+            NppesSnapshot snapshot
+    ) {
         Environment environment = mock(Environment.class);
         when(environment.getProperty("SAMPLE_MODE")).thenReturn(sampleMode);
         when(environment.getProperty("RECORD_MODE")).thenReturn(recordMode);
@@ -226,7 +349,48 @@ class QueryServiceTest {
                 executor,
                 new SampleStore(mapper, temp.resolve("samples").toString()),
                 new ReceiptStore(mapper, temp.resolve("receipts").toString()),
+                snapshot,
+                retries,
                 environment);
+    }
+
+    private NppesSnapshot emptySnapshot() {
+        try {
+            Path file = temp.resolve("nppes.json");
+            if (Files.notExists(file)) {
+                Files.writeString(file, "{\"result_count\":0,\"results\":[]}");
+            }
+            return new NppesSnapshot(mapper, file.toString(), temp);
+        } catch (IOException ex) {
+            throw new UncheckedIOException(ex);
+        }
+    }
+
+    private static QueryRetries retriesInstant() {
+        return new QueryRetries(Clock.fixed(Instant.EPOCH, ZoneOffset.UTC), millis -> { });
+    }
+
+    private static final class ManualClock extends Clock {
+        private long millis;
+
+        @Override
+        public ZoneId getZone() {
+            return ZoneOffset.UTC;
+        }
+
+        @Override
+        public Clock withZone(ZoneId zone) {
+            return this;
+        }
+
+        @Override
+        public Instant instant() {
+            return Instant.ofEpochMilli(millis);
+        }
+
+        void advance(long amount) {
+            millis += amount;
+        }
     }
 
     private static QueryRequest request(String batch, int limit, String runId) {
