@@ -106,6 +106,8 @@ export async function plan(input: {
       model: llmResult.model,
       latencyMs: llmResult.latencyMs,
       replayed: llmResult.replayed,
+      meterlessReceiptId: llmResult.meterlessReceiptId,
+      routedModel: llmResult.routedModel,
       rationale: llmResult.data.rationale,
     },
   });

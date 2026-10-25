@@ -75,6 +75,8 @@ export async function arbitrate(input: {
           model: result.model,
           latencyMs: result.latencyMs,
           replayed: result.replayed,
+          meterlessReceiptId: result.meterlessReceiptId,
+          routedModel: result.routedModel,
           attempt: input.retriesUsed,
         },
       });

@@ -108,6 +108,8 @@ async function finish(
       model: result?.model ?? null,
       latencyMs: result?.latencyMs ?? 0,
       replayed: result?.replayed ?? false,
+      meterlessReceiptId: result?.meterlessReceiptId ?? null,
+      routedModel: result?.routedModel ?? null,
     },
   });
   return {

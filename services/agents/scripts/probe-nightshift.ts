@@ -1,5 +1,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+import { answerContent, readMaxTokens } from "../src/llm/nemotron.js";
 
 const APP_HEADER = { "meterless-app": "ghost-network-auditor" };
 
@@ -21,10 +23,8 @@ function loadDotEnv() {
   }
 }
 
-loadDotEnv();
-
-const baseUrl = (process.env.NIGHTSHIFT_BASE_URL ?? "http://127.0.0.1:8088/v1").replace(/\/$/, "");
-const token = process.env.NIGHTSHIFT_TOKEN ?? "";
+let baseUrl = (process.env.NIGHTSHIFT_BASE_URL ?? "http://127.0.0.1:8088/v1").replace(/\/$/, "");
+let token = process.env.NIGHTSHIFT_TOKEN ?? "";
 
 function looksSuper(id: string): boolean {
   return /super/i.test(id);
@@ -61,7 +61,7 @@ function pickModels(listed: string[]): { planner?: string; worker?: string } {
 async function chatOnce(
   model: string,
   withThinking: boolean,
-): Promise<{ ok: boolean; status: number; hasThinking: boolean; error?: string }> {
+): Promise<{ ok: boolean; jsonOk: boolean; status: number; hasThinking: boolean; error?: string }> {
   const payload: Record<string, unknown> = {
     model,
     messages: [
@@ -71,7 +71,7 @@ async function chatOnce(
       },
     ],
     response_format: { type: "json_object" },
-    max_tokens: 64,
+    max_tokens: readMaxTokens(),
   };
   if (withThinking) {
     payload.chat_template_kwargs = { enable_thinking: true, reasoning_budget: 256 };
@@ -86,17 +86,43 @@ async function chatOnce(
     choices?: { message?: { content?: string; reasoning?: unknown; reasoning_content?: unknown } }[];
   };
   const message = record.choices?.[0]?.message;
+  const content = answerContent(message);
   const hasThinking = Boolean(message?.reasoning ?? message?.reasoning_content);
   const ok = status >= 200 && status < 300;
+  let jsonOk = false;
+  if (ok && content.trim() !== "") {
+    try {
+      JSON.parse(content);
+      jsonOk = true;
+    } catch {
+      jsonOk = false;
+    }
+  }
   return {
     ok,
+    jsonOk,
     status,
     hasThinking,
     error: ok ? undefined : record.error?.message ?? `status ${status}`,
   };
 }
 
+export function probeOutcome(jsonOk: boolean, thinkingOk: boolean): { exitCode: number; warning: string | null } {
+  if (!jsonOk) return { exitCode: 1, warning: null };
+  if (!thinkingOk) {
+    return {
+      exitCode: 0,
+      warning:
+        "Probe warning: thinking kwargs were not clearly honored. Critic should omit chat_template_kwargs until Nightshift passes them through.",
+    };
+  }
+  return { exitCode: 0, warning: null };
+}
+
 async function main() {
+  loadDotEnv();
+  baseUrl = (process.env.NIGHTSHIFT_BASE_URL ?? "http://127.0.0.1:8088/v1").replace(/\/$/, "");
+  token = process.env.NIGHTSHIFT_TOKEN ?? "";
   console.log(`Nightshift base: ${baseUrl}`);
   let listed: string[] = [];
   try {
@@ -131,28 +157,38 @@ async function main() {
   console.log(`Worker looks Lightning: ${looksLightning(picked.worker)}`);
 
   const uniqueModels = [...new Set([picked.planner, picked.worker])];
-  let kwargsHonored = true;
-  let allChatsOk = true;
+  let jsonOk = true;
+  let thinkingOk = true;
   for (const model of uniqueModels) {
     const plain = await chatOnce(model, false);
     const thinking = await chatOnce(model, true);
     console.log(
-      `Model ${model}: json=${plain.ok ? "ok" : "FAIL"} thinking=${thinking.ok ? "ok" : "FAIL"} thinking_field=${thinking.hasThinking}`,
+      `Model ${model}: json=${plain.jsonOk ? "ok" : "FAIL"} thinking=${thinking.ok ? "ok" : "FAIL"} thinking_field=${thinking.hasThinking}`,
     );
-    if (!plain.ok || !thinking.ok) allChatsOk = false;
-    if (thinking.ok && !thinking.hasThinking) kwargsHonored = false;
-    if (!thinking.ok) kwargsHonored = false;
+    if (!plain.jsonOk) jsonOk = false;
+    if (!thinking.ok || !thinking.hasThinking) thinkingOk = false;
   }
-  console.log(`chat_template_kwargs honored: ${kwargsHonored ? "yes" : "no"}`);
+  console.log(`chat_template_kwargs honored: ${thinkingOk ? "yes" : "no"}`);
 
-  if (!allChatsOk) {
+  const outcome = probeOutcome(jsonOk, thinkingOk);
+  if (outcome.exitCode !== 0) {
     console.log("Probe failed: a configured Nemotron model rejected a trivial JSON chat.");
-    process.exit(1);
+    process.exit(outcome.exitCode);
   }
-  if (!kwargsHonored) {
-    console.log("Probe warning: thinking kwargs were not clearly honored. Critic should omit chat_template_kwargs until Nightshift passes them through.");
-  }
+  if (outcome.warning) console.log(outcome.warning);
   console.log("Probe passed.");
 }
 
-main();
+function isMain(): boolean {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  try {
+    return import.meta.url === pathToFileURL(entry).href;
+  } catch {
+    return false;
+  }
+}
+
+if (isMain()) {
+  main();
+}
