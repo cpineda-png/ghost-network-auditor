@@ -48,7 +48,29 @@ describe("GET /health", () => {
         ok: true,
         gateway,
         llmReplay: true,
+        nightshift: "up",
       });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("reports nightshift down when the models call fails", async () => {
+    const fetchImpl = vi.fn(async (url: string) => {
+      if (url.includes("/models")) throw new Error("connect ECONNREFUSED 127.0.0.1:8088");
+      return new Response(JSON.stringify({ zetaris: "not_configured", mode: "sample" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+    const app = createApp({ fetchImpl, gatewayUrl: "http://gateway" });
+    const server = await listen(app);
+    try {
+      const response = await fetch(`${server.url}/health`);
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as { gateway: unknown; nightshift: string };
+      expect(body.gateway).toEqual({ zetaris: "not_configured", mode: "sample" });
+      expect(body.nightshift).toBe("down");
     } finally {
       await server.close();
     }
@@ -66,6 +88,7 @@ describe("GET /health", () => {
         ok: true,
         gateway: "unreachable",
         llmReplay: false,
+        nightshift: "down",
       });
     } finally {
       await server.close();
@@ -154,7 +177,43 @@ describe("POST /runs", () => {
       await server.close();
     }
   });
+
+  it("keeps the server up when the model is unreachable and finishes the run with an error", async () => {
+    const world = new GnaWorldModel();
+    const llm: LlmClient = {
+      chatJson: vi.fn().mockRejectedValue(new Error("connect ECONNREFUSED 127.0.0.1:8088")),
+    };
+    const app = createApp({ gateway: new MockGateway(), llm, world, fetchImpl: vi.fn() });
+    const server = await listen(app);
+    try {
+      const started = await fetch(`${server.url}/runs`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: { batch: "A" } }),
+      });
+      expect(started.status).toBe(200);
+      const { runId } = (await started.json()) as { runId: string };
+      const report = await waitForJson(server.url, `/runs/${runId}/report`);
+      expect(report.status).toBe("failed");
+      expect(report.error).toContain("ECONNREFUSED 127.0.0.1:8088");
+      const events = await world.eventsForRun(runId);
+      expect(events.some((event) => event.type === "run_finished" && event.payload.error === report.error)).toBe(true);
+      const health = await fetch(`${server.url}/health`);
+      expect(health.status).toBe(200);
+    } finally {
+      await server.close();
+    }
+  });
 });
+
+async function waitForJson(base: string, path: string): Promise<{ status?: string; error?: string }> {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const response = await fetch(`${base}${path}`);
+    if (response.status === 200) return (await response.json()) as { status?: string; error?: string };
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  throw new Error(`timed out waiting for ${path}`);
+}
 
 describe("contracts", () => {
   it("rejects a claim with empty receiptIds", () => {
