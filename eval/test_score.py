@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import io
 import sys
+import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -173,6 +176,125 @@ class ScoreTest(unittest.TestCase):
         report = score.render_report([self.cold, self.warm])
         self.assertIn("## Cold vs warm", report)
         self.assertIn("mem-sunrise-move", "".join(row["memory_ids"] for row in score.load_diff(FIXTURES / "warm_B.csv")))
+
+    def test_touched_only_recall_ignores_listings_absent_from_the_diff(self) -> None:
+        labels = [
+            {
+                "listing_id": "L-1",
+                "field": "phone",
+                "error_type": "phone",
+                "true_value": "718-555-0100",
+                "is_decoy": "false",
+                "notes": "",
+            },
+            {
+                "listing_id": "L-2",
+                "field": "phone",
+                "error_type": "phone",
+                "true_value": "718-555-0101",
+                "is_decoy": "false",
+                "notes": "",
+            },
+            {
+                "listing_id": "L-1",
+                "field": "specialty",
+                "error_type": "decoy",
+                "true_value": "cardiology",
+                "is_decoy": "true",
+                "notes": "",
+            },
+        ]
+        directory = {"L-1": {"batch": "A"}, "L-2": {"batch": "A"}}
+        diff = [
+            diff_row("L-1", "phone", new_value="718-555-0100"),
+            diff_row("L-1", "specialty", new_value="cardiology", receipt_ids="rcpt-2"),
+        ]
+        full = score.score_run(diff, labels, directory)
+        scoped = score.score_run(diff, labels, directory, touched_only=True)
+        self.assertEqual(full.recall, 0.5)
+        self.assertEqual(full.planted, 2)
+        self.assertEqual(scoped.recall, 1.0)
+        self.assertEqual(scoped.planted, 1)
+        self.assertEqual(scoped.detected, 1)
+        self.assertEqual(scoped.recall_by_type["phone"], (1, 1))
+        self.assertEqual(full.decoy_applied, 1)
+        self.assertEqual(scoped.decoy_applied, 1)
+        self.assertEqual(scoped.touched_listings, 1)
+        self.assertNotIn("touched-only", score.format_summary(scoped))
+        self.assertNotIn("touched-only", score.render_report([full]))
+        self.assertIn("touched-only (1 listings)", score.render_report([scoped]))
+
+    def test_touched_only_counts_a_missed_field_on_a_touched_listing(self) -> None:
+        labels = [
+            {
+                "listing_id": "L-1",
+                "field": "phone",
+                "error_type": "phone",
+                "true_value": "718-555-0100",
+                "is_decoy": "false",
+                "notes": "",
+            },
+            {
+                "listing_id": "L-1",
+                "field": "address",
+                "error_type": "address",
+                "true_value": "10 Main St",
+                "is_decoy": "false",
+                "notes": "",
+            },
+        ]
+        directory = {"L-1": {"batch": "A"}}
+        result = score.score_run(
+            [diff_row("L-1", "phone", new_value="718-555-0100")],
+            labels,
+            directory,
+            touched_only=True,
+        )
+        self.assertEqual(result.planted, 2)
+        self.assertEqual(result.detected, 1)
+        self.assertEqual(result.recall, 0.5)
+        self.assertEqual(result.recall_by_type["address"], (0, 1))
+        self.assertIn("touched-only (1 listings)", score.render_report([result]))
+
+    def test_touched_only_keeps_sunrise_for_listings_the_diff_missed(self) -> None:
+        labels = [
+            {
+                "listing_id": "L-2",
+                "field": "address",
+                "error_type": "address",
+                "true_value": "100 Harbor Sample Ave",
+                "is_decoy": "false",
+                "notes": "",
+            }
+        ]
+        directory = {"L-1": {"batch": "A"}, "L-2": {"batch": "A"}}
+        diff = [diff_row("L-1", "phone", new_value="718-555-0199")]
+        full = score.score_run(diff, labels, directory)
+        scoped = score.score_run(diff, labels, directory, touched_only=True)
+        self.assertEqual(full.recall, 0.0)
+        self.assertEqual(full.sunrise_ids, ["L-2"])
+        self.assertEqual(scoped.planted, 0)
+        self.assertEqual(scoped.recall, 1.0)
+        self.assertEqual(scoped.precision, 0.0)
+        self.assertEqual(scoped.sunrise_ids, ["L-2"])
+
+    def test_touched_only_flag_writes_the_report_header(self) -> None:
+        rows = score.load_diff(FIXTURES / "perfect_A.csv")
+        listings = len({row["listing_id"] for row in rows})
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "report.md"
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                code = score.main(
+                    ["--diff", str(FIXTURES / "perfect_A.csv"), "--touched-only", "--out", str(out)]
+                )
+            report = out.read_text(encoding="utf-8")
+        self.assertEqual(code, 0)
+        self.assertIn(f"touched-only ({listings} listings)", report)
+        self.assertIn(
+            "batch=A recall=1.00 precision=1.00 escalation_rate=0.40 decoy_fp=0 ghost_violations=0 missing_receipts=0",
+            stdout.getvalue(),
+        )
 
 
 if __name__ == "__main__":
