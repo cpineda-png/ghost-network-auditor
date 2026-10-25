@@ -3,15 +3,18 @@ import { templateIdSchema, type RunRequest, type TemplateId } from "contracts";
 import type { Gateway } from "../gateway/types.js";
 import type { LlmClient } from "../llm/nemotron.js";
 import { listingId, type GnaWorldModel } from "../world/worldModel.js";
+import { coerceUnitScore } from "./unitScore.js";
 
 export const PLANNER_FAMILIES = ["contact", "status", "specialty"] as const;
 export const CHUNK_SIZE = 10;
+
+const unitScoreSchema = z.preprocess(coerceUnitScore, z.number().min(0).max(1));
 
 export const plannerOutputSchema = z.object({
   rankings: z.array(
     z.object({
       chunkIndex: z.number().int(),
-      risk: z.number(),
+      risk: unitScoreSchema,
       templates: z.array(templateIdSchema),
     }),
   ),
@@ -151,7 +154,14 @@ function plannerMessages(runId: string, receiptId: string, chunks: unknown[][], 
   return [
     {
       role: "system" as const,
-      content: "Risk-rank directory chunks and pick gateway templates. Return JSON {rankings:[{chunkIndex,risk,templates}], rationale}.",
+      content: [
+        "Risk-rank directory chunks and pick gateway templates. JSON only, no prose.",
+        'Return exactly {"rankings":[{"chunkIndex":0,"risk":0.25,"templates":["roster_by_npis"]}],"rationale":"One roster check for this chunk."}.',
+        "chunkIndex is an integer from the input, from 0 through chunkCount - 1.",
+        "risk is a number from 0 to 1, not a word.",
+        "templates is an array of template ids copied only from the templates list in the user message.",
+        "rationale is a string.",
+      ].join(" "),
     },
     {
       role: "user" as const,

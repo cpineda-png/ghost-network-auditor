@@ -4,6 +4,30 @@ import type { LlmClient } from "../llm/nemotron.js";
 import { GnaWorldModel } from "../world/worldModel.js";
 import { CHUNK_SIZE, PLANNER_FAMILIES, chunkRows, plan, plannerOutputSchema } from "./planner.js";
 
+describe("planner output", () => {
+  it("parses the live Ultra answer that sent risk as a label", () => {
+    const parsed = plannerOutputSchema.parse({
+      rankings: [
+        {
+          chunkIndex: 0,
+          risk: "low",
+          templates: ["directory_batch", "roster_by_npis", "claims_by_npis", "nppes_by_npis"],
+        },
+      ],
+      rationale: "...",
+    });
+    expect(parsed.rankings[0]?.risk).toBe(0.25);
+    expect(plannerOutputSchema.parse({
+      rankings: [{ chunkIndex: 0, risk: "HIGH", templates: ["roster_by_npis"] }],
+      rationale: "high",
+    }).rankings[0]?.risk).toBe(0.85);
+    expect(plannerOutputSchema.parse({
+      rankings: [{ chunkIndex: 0, risk: "0.4", templates: ["roster_by_npis"] }],
+      rationale: "numeric",
+    }).rankings[0]?.risk).toBe(0.4);
+  });
+});
+
 describe("planner chunks", () => {
   it("splits rows into chunks of 10 and one task per family", async () => {
     const rows = Array.from({ length: 21 }, (_, i) => ({ listing_id: `L-${i}` }));

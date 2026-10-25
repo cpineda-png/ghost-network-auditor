@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { ZodType } from "zod";
+import { ZodError, type ZodIssue, type ZodType } from "zod";
 
 export type ChatRole = "planner" | "worker" | "critic";
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
@@ -118,7 +118,7 @@ class NightshiftLlmClient implements LlmClient {
     try {
       return await this.callWithModel(role, messages, schema, primary);
     } catch (error) {
-      if (error instanceof EscalationError || error instanceof ReplayMissError) throw error;
+      if (error instanceof ReplayMissError) throw error;
       if (fallback && fallback !== primary) {
         return this.callWithModel(role, messages, schema, fallback);
       }
@@ -159,8 +159,8 @@ class NightshiftLlmClient implements LlmClient {
       completion = await withLimit(() => this.complete(role, model, messages));
       try {
         parsed = schema.parse(parseJson(completion.content));
-      } catch {
-        throw new EscalationError("model response failed schema validation after retry");
+      } catch (error) {
+        throw new EscalationError(escalationMessage(error, completion.content));
       }
     }
     const latencyMs = Date.now() - started;
@@ -267,6 +267,22 @@ function parseJson(content: string): unknown {
   } catch {
     throw new Error("invalid json");
   }
+}
+
+function issueLine(issue: ZodIssue): string {
+  const path = issue.path.map((part) => String(part)).join(".");
+  if (issue.code === "invalid_type") return `${path}: expected ${issue.expected}`;
+  return `${path}: ${issue.message}`;
+}
+
+function escalationMessage(error: unknown, content: string): string {
+  const detail =
+    error instanceof ZodError
+      ? error.issues.map((issue) => issueLine(issue)).join("; ")
+      : error instanceof Error
+        ? error.message
+        : "schema validation failed";
+  return `model response failed schema validation after retry (${detail}) ${content.slice(0, 300)}`;
 }
 
 async function withLimit<T>(fn: () => Promise<T>): Promise<T> {
