@@ -6,8 +6,14 @@ import type { MeterlessHMem } from "../memory/hmem.js";
 import { listingId, type GnaWorldModel } from "../world/worldModel.js";
 import { arbitrate } from "./arbiter.js";
 import { criticize } from "./critic.js";
-import { investigateContact } from "./investigator.js";
-import { plan, readRunLimit, readRunOffset } from "./planner.js";
+import {
+  investigateContact,
+  investigateStatus,
+  loadChunkSources,
+  npisFromRows,
+  type Investigation,
+} from "./investigator.js";
+import { chunkRows, plan, readRunLimit, readRunOffset } from "./planner.js";
 import { decideRisk } from "./risk.js";
 
 export const DIFF_HEADER =
@@ -88,6 +94,32 @@ export async function executeRun(input: {
   }
 }
 
+async function investigateDirectory(input: {
+  runId: string;
+  rows: unknown[];
+  directoryReceiptId: string;
+  gateway: Gateway;
+  world: GnaWorldModel;
+  llm: LlmClient;
+}): Promise<Investigation> {
+  const claims: Claim[] = [];
+  const conflicts: Investigation["conflicts"] = [];
+  let summary: string | null = null;
+  for (const chunk of chunkRows(input.rows)) {
+    const sources = await loadChunkSources({
+      gateway: input.gateway,
+      npis: npisFromRows(chunk),
+      runId: input.runId,
+    });
+    const contact = await investigateContact({ ...input, rows: chunk, sources });
+    const status = await investigateStatus({ ...input, rows: chunk, sources });
+    claims.push(...contact.claims, ...status.claims);
+    conflicts.push(...contact.conflicts, ...status.conflicts);
+    summary = contact.summary;
+  }
+  return { claims, conflicts, summary };
+}
+
 async function finishFailed(world: GnaWorldModel, runId: string, message: string): Promise<void> {
   try {
     await world.append({
@@ -118,7 +150,7 @@ async function runContact(input: {
   const modelCounts = new Map<string, number>();
   const llm = countModels(input.llm, modelCounts);
   const planned = await plan({ ...input, llm });
-  const investigation = await investigateContact({
+  const investigation = await investigateDirectory({
     runId: input.runId,
     rows: planned.directoryRows,
     directoryReceiptId: planned.receiptId,
@@ -138,7 +170,6 @@ async function runContact(input: {
       const field = claims[0]?.field;
       const listing = claims[0]?.listingId;
       if (!field || !listing) continue;
-      if (field !== "address" && field !== "phone") continue;
       const conflict = investigation.conflicts.some((item) => item.listingId === listing && item.field === field);
       if (!conflict) {
         cards.push(unchangedCard(input.runId, claims));
@@ -401,7 +432,15 @@ function oldDirectoryValue(field: Field, row: Record<string, unknown> | undefine
   if (!row) return "";
   if (field === "address") return row.address_line1 === undefined ? "" : String(row.address_line1);
   if (field === "phone") return row.phone === undefined ? "" : String(row.phone);
+  if (field === "status") return cell(row.network_status);
+  if (field === "specialty") return cell(row.specialty);
+  if (field === "accepting") return cell(row.accepting_new_patients);
   return "";
+}
+
+function cell(value: unknown): string {
+  if (value === undefined || value === null) return "";
+  return String(value);
 }
 
 function diffFieldValue(field: string, value: string): string {

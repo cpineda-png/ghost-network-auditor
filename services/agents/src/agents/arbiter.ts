@@ -70,6 +70,7 @@ export async function arbitrate(input: {
             "confidence: number from 0 to 1, not a word.",
             "rationale: string, at most 60 words.",
             "receiptIds: array of strings. Must have at least one id, and must come only from the claims given.",
+            "Cite receipt ids for ghost evidence, including a terminated roster and a listing with no claims in the window.",
             "memoryIds: array of strings. Cite memory ids when a ruling drives the choice.",
             'Example: {"proposalId":"p1","listingId":"L-00001","field":"phone","proposedValue":"718-555-0100","winningSource":"roster","confidence":0.85,"rationale":"Roster matches the listing.","receiptIds":["receipt-1"],"memoryIds":[]}.',
           ].join(" "),

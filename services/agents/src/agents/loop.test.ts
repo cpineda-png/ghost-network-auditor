@@ -1,15 +1,18 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
-import type { Claim, Proposal } from "contracts";
+import type { Claim, Proposal, QueryResponse, ReplayResponse } from "contracts";
 import { proposalSchema } from "contracts";
+import { CATALOG } from "../gateway/catalog.js";
 import { MockGateway } from "../gateway/mock.js";
+import { makeQueryResponse } from "../gateway/receipt.js";
+import type { Gateway } from "../gateway/types.js";
 import type { ChatRole, LlmClient } from "../llm/nemotron.js";
 import { MeterlessHMem } from "../memory/hmem.js";
 import { addressValue, normalize } from "../normalize.js";
 import { GnaWorldModel } from "../world/worldModel.js";
 import { arbitrate, routeConfidence } from "./arbiter.js";
 import { criticize } from "./critic.js";
-import { investigateContact } from "./investigator.js";
+import { investigateContact, investigateStatus } from "./investigator.js";
 import { decideRisk } from "./risk.js";
 import { DIFF_HEADER, executeRun, fieldGroupsByListing, renderDiff } from "./run.js";
 
@@ -190,6 +193,8 @@ describe("critic and risk", () => {
     expect(decideRisk({ field: "accepting", conflict: true, verdict: "pass", confidence: 0.99 })).toBe("escalated");
     expect(decideRisk({ field: "status", conflict: true, verdict: "pass", confidence: 0.99 })).toBe("escalated");
     expect(decideRisk({ field: "phone", conflict: true, verdict: "pass", confidence: 0.72 })).toBe("applied");
+    expect(decideRisk({ field: "specialty", conflict: true, verdict: "pass", confidence: 0.7 })).toBe("applied");
+    expect(decideRisk({ field: "specialty", conflict: true, verdict: "pass", confidence: 0.69 })).toBe("escalated");
   });
 });
 
@@ -322,6 +327,159 @@ describe("checkpoint", () => {
   });
 });
 
+describe("ghost investigator", () => {
+  it("treats a term date as terminated and skips pending roster status", async () => {
+    const directory = [
+      directoryListing("L-term", npiAt(1)),
+      directoryListing("L-pending", npiAt(2)),
+      directoryListing("L-pending-empty", npiAt(3)),
+      directoryListing("L-out", npiAt(4), { network_status: "out" }),
+    ];
+    const roster = [
+      rosterListing(npiAt(1), { status: "active", term_date: "2025-08-31" }),
+      rosterListing(npiAt(2), { status: "pending" }),
+      rosterListing(npiAt(3), { status: "Pending" }),
+      rosterListing(npiAt(4), { status: "terminated" }),
+    ];
+    const claims = [claimsMonth(npiAt(1), 1), claimsMonth(npiAt(2), 2), claimsMonth(npiAt(4), 1)];
+    const gateway = new ScriptGateway(directory, roster, claims);
+    const world = new GnaWorldModel();
+    const result = await investigateStatus({
+      runId: "status-rules",
+      rows: directory,
+      directoryReceiptId: "receipt-directory",
+      gateway,
+      world,
+    });
+
+    const term = result.claims.filter((item) => item.listingId === "L-term" && item.field === "status");
+    expect(term.map((item) => item.source).sort()).toEqual(["directory", "roster"]);
+    expect(term.find((item) => item.source === "roster")?.value).toBe("terminated");
+    expect(result.conflicts).toContainEqual({ listingId: "L-term", field: "status" });
+
+    expect(result.claims.some((item) => item.listingId === "L-pending" && item.field === "status" && item.source === "roster")).toBe(false);
+    expect(result.conflicts.some((item) => item.listingId === "L-pending" && item.field === "status")).toBe(false);
+
+    const empty = result.claims.filter((item) => item.listingId === "L-pending-empty" && item.field === "status");
+    expect(empty.some((item) => item.source === "roster")).toBe(false);
+    expect(empty.find((item) => item.source === "claims")?.value).toBe("terminated");
+    expect(empty.find((item) => item.source === "claims")?.receiptIds).toEqual(["receipt-claims_by_npis-status-rules"]);
+    expect(result.conflicts).toContainEqual({ listingId: "L-pending-empty", field: "status" });
+    expect(result.conflicts.some((item) => item.listingId === "L-pending-empty" && item.field === "accepting")).toBe(false);
+    expect(result.conflicts.some((item) => item.listingId === "L-out")).toBe(false);
+
+    const events = await world.eventsForRun("status-rules");
+    expect(events.some((event) => event.type === "conflict_found" && event.field === "status" && event.actor === "investigator.status")).toBe(true);
+    expect(gateway.queries.filter((query) => query.templateId === "roster_by_npis")).toHaveLength(1);
+    expect(gateway.queries.filter((query) => query.templateId === "claims_by_npis")).toHaveLength(1);
+  });
+
+  it("queries roster and claims once per chunk of ten", async () => {
+    const gateway = new MockGateway();
+    const queries: { templateId: string; count: number }[] = [];
+    const original = gateway.query.bind(gateway);
+    vi.spyOn(gateway, "query").mockImplementation(async (templateId, params, runId) => {
+      const npis = Array.isArray(params.npis) ? params.npis : [];
+      queries.push({ templateId, count: npis.length });
+      return original(templateId, params, runId);
+    });
+    const rows = Array.from({ length: 11 }, (_, index) => directoryListing(`L-chunk-${index}`, npiAt(20 + index)));
+    await investigateStatus({
+      runId: "chunks",
+      rows,
+      directoryReceiptId: "receipt-directory",
+      gateway,
+      world: new GnaWorldModel(),
+    });
+    expect(queries.filter((query) => query.templateId === "roster_by_npis").map((query) => query.count)).toEqual([10, 1]);
+    expect(queries.filter((query) => query.templateId === "claims_by_npis").map((query) => query.count)).toEqual([10, 1]);
+  });
+
+  it("escalates ghosts, applies a specialty mismatch, and leaves a clean listing unchanged", async () => {
+    const previousLimit = process.env.RUN_LIMIT;
+    const previousOffset = process.env.RUN_OFFSET;
+    process.env.RUN_LIMIT = "10";
+    process.env.RUN_OFFSET = "0";
+    const directory = [
+      directoryListing("L-status", npiAt(1)),
+      directoryListing("L-accept", npiAt(2)),
+      directoryListing("L-spec", npiAt(3)),
+      directoryListing("L-clean", npiAt(4)),
+      directoryListing("L-none", npiAt(5)),
+      directoryListing("L-pending", npiAt(6)),
+    ];
+    const roster = [
+      rosterListing(npiAt(1), { status: "terminated" }),
+      rosterListing(npiAt(2)),
+      rosterListing(npiAt(3), { specialty: "Psychologist" }),
+      rosterListing(npiAt(4)),
+      rosterListing(npiAt(5)),
+      rosterListing(npiAt(6), { status: "pending" }),
+    ];
+    const claims = [
+      claimsMonth(npiAt(1), 2),
+      claimsMonth(npiAt(2), 0, "2026-05"),
+      claimsMonth(npiAt(2), 0, "2026-06"),
+      claimsMonth(npiAt(3), 1),
+      claimsMonth(npiAt(4), 3),
+      claimsMonth(npiAt(6), 4),
+    ];
+    const gateway = new ScriptGateway(directory, roster, claims);
+    try {
+      const outcome = await executeRun({
+        request: { scope: { batch: "A" }, useMemory: false },
+        runId: "ghost-run",
+        gateway,
+        world: new GnaWorldModel(),
+        hmem: new MeterlessHMem(),
+        llm: ghostLlm(),
+      });
+      const status = card(outcome.cards, "L-status", "status");
+      const accepting = card(outcome.cards, "L-accept", "accepting");
+      const specialty = card(outcome.cards, "L-spec", "specialty");
+      const pending = card(outcome.cards, "L-pending", "status");
+      const missing = card(outcome.cards, "L-none", "status");
+      expect(status.status).toBe("escalated");
+      expect(status.sources.some((source) => source.source === "roster" && source.receiptIds.includes("receipt-roster_by_npis-ghost-run"))).toBe(true);
+      expect(accepting.status).toBe("escalated");
+      expect(accepting.sources.some((source) => source.source === "claims" && source.receiptIds.includes("receipt-claims_by_npis-ghost-run"))).toBe(true);
+      expect(specialty.status).toBe("applied");
+      expect(specialty.winner?.source).toBe("roster");
+      expect(missing.status).toBe("escalated");
+      expect(missing.sources.some((source) => source.source === "claims")).toBe(true);
+      expect(pending.status).toBe("unchanged");
+      expect(pending.sources.some((source) => source.source === "roster")).toBe(false);
+      const clean = outcome.cards.filter((item) => item.listingId === "L-clean");
+      expect(clean.length).toBeGreaterThan(0);
+      expect(clean.every((item) => item.status === "unchanged")).toBe(true);
+      expect(outcome.report.ghosts).toBe(3);
+      expect(outcome.report.ghosts).toBe(
+        outcome.cards.filter((item) => item.status === "escalated" && (item.field === "status" || item.field === "accepting")).length,
+      );
+
+      const statusDiff = diffCells(outcome.diff, "L-status", "status");
+      const acceptingDiff = diffCells(outcome.diff, "L-accept", "accepting");
+      const specialtyDiff = diffCells(outcome.diff, "L-spec", "specialty");
+      expect(statusDiff[2]).toBe("status");
+      expect(statusDiff[6]).toBe("escalated");
+      expect(statusDiff[8]).toContain("receipt-roster_by_npis-ghost-run");
+      expect(acceptingDiff[2]).toBe("accepting");
+      expect(acceptingDiff[6]).toBe("escalated");
+      expect(acceptingDiff[8]).toContain("receipt-claims_by_npis-ghost-run");
+      expect(specialtyDiff[2]).toBe("specialty");
+      expect(specialtyDiff[4]).toBe("Psychologist");
+      expect(specialtyDiff[6]).toBe("applied");
+      expect(specialtyDiff[8]).toContain("receipt-roster_by_npis-ghost-run");
+      expect(gateway.queries.filter((query) => query.templateId === "roster_by_npis")).toHaveLength(1);
+      expect(gateway.queries.filter((query) => query.templateId === "claims_by_npis")).toHaveLength(1);
+      expect(gateway.queries.every((query) => query.npis.length <= 10)).toBe(true);
+    } finally {
+      restoreEnv("RUN_LIMIT", previousLimit);
+      restoreEnv("RUN_OFFSET", previousOffset);
+    }
+  });
+});
+
 function summaryLlm(): LlmClient {
   return {
     async chatJson() {
@@ -363,4 +521,162 @@ function proposal(confidence: number, memoryIds: string[], receiptId = "receipt-
     receiptIds: [receiptId],
     memoryIds,
   };
+}
+
+function npiAt(n: number): string {
+  return `810000${String(n).padStart(4, "0")}`;
+}
+
+function directoryListing(id: string, npi: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    listing_id: id,
+    batch: "A",
+    npi,
+    address_line1: "10 Main St",
+    zip: "10001",
+    phone: "212-555-0100",
+    specialty: "Psychiatry",
+    network_status: "in",
+    accepting_new_patients: true,
+    ...extra,
+  };
+}
+
+function rosterListing(npi: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    npi,
+    status: "active",
+    term_date: "",
+    specialty: "Psychiatry",
+    address_line1: "10 Main St",
+    zip: "10001",
+    phone: "212-555-0100",
+    ...extra,
+  };
+}
+
+function claimsMonth(npi: string, newPatients: number, month = "2026-06"): Record<string, unknown> {
+  return {
+    npi,
+    service_address_line1: "10 Main St",
+    service_zip: "10001",
+    month,
+    claim_count: 1,
+    new_patient_count: newPatients,
+  };
+}
+
+class ScriptGateway implements Gateway {
+  readonly queries: { templateId: string; npis: string[] }[] = [];
+  private readonly receipts = new Map<string, QueryResponse>();
+
+  constructor(
+    private readonly directory: Record<string, unknown>[],
+    private readonly roster: Record<string, unknown>[],
+    private readonly claims: Record<string, unknown>[],
+  ) {}
+
+  async query(templateId: string, params: Record<string, unknown>, runId: string): Promise<QueryResponse> {
+    const npis = Array.isArray(params.npis) ? params.npis.map(String) : [];
+    this.queries.push({ templateId, npis });
+    let rows = this.rowsFor(templateId, params, npis);
+    const response = makeQueryResponse(templateId, params, runId, Object.keys(rows[0] ?? {}), rows, {
+      mode: "replayed",
+      sources: [templateId.split("_")[0] ?? "directory"],
+    });
+    this.receipts.set(response.receipt.receiptId, response);
+    return response;
+  }
+
+  async getReceipt(id: string) {
+    const stored = this.receipts.get(id);
+    if (!stored) throw new Error(`receipt ${id} not found`);
+    return stored.receipt;
+  }
+
+  async catalog() {
+    return CATALOG;
+  }
+
+  async replay(receiptId: string): Promise<ReplayResponse> {
+    const receipt = await this.getReceipt(receiptId);
+    return {
+      receiptId,
+      match: true,
+      originalRowsHash: receipt.rowsHash,
+      newRowsHash: receipt.rowsHash,
+      rows: receipt.rowsPreview,
+    };
+  }
+
+  private rowsFor(templateId: string, params: Record<string, unknown>, npis: string[]): Record<string, unknown>[] {
+    if (templateId === "directory_batch") {
+      const offset = Number(params.offset);
+      const start = Number.isFinite(offset) && offset > 0 ? offset : 0;
+      const limit = Number(params.limit);
+      if (Number.isFinite(limit) && limit >= 0) return this.directory.slice(start, start + limit);
+      return this.directory.slice(start);
+    }
+    const wanted = new Set(npis);
+    if (templateId === "roster_by_npis") return this.roster.filter((row) => wanted.has(String(row.npi)));
+    if (templateId === "claims_by_npis") return this.claims.filter((row) => wanted.has(String(row.npi)));
+    return [];
+  }
+}
+
+function ghostLlm(): LlmClient {
+  return {
+    async chatJson(role, messages) {
+      if (role === "worker") {
+        return { data: { summary: "Contact sources disagree." }, model: "lightning", latencyMs: 1, replayed: true };
+      }
+      if (role === "critic") {
+        return {
+          data: { verdict: "pass", reasons: ["rows support the value"], failedReceiptIds: [] },
+          model: "super",
+          latencyMs: 1,
+          replayed: true,
+        };
+      }
+      if (messages[0]?.content.includes("Risk-rank")) {
+        return {
+          data: {
+            rankings: [{ chunkIndex: 0, risk: 0.4, templates: ["roster_by_npis", "claims_by_npis"] }],
+            rationale: "status family",
+          },
+          model: "super",
+          latencyMs: 1,
+          replayed: true,
+        };
+      }
+      const body = JSON.parse(messages[1]?.content ?? "{}") as { claims: Claim[] };
+      const preferred =
+        body.claims.find((item) => item.source === "roster") ??
+        body.claims.find((item) => item.source === "claims") ??
+        body.claims[0]!;
+      return {
+        data: proposal(0.84, [], preferred.receiptIds[0]!, preferred),
+        model: "super",
+        latencyMs: 1,
+        replayed: true,
+      };
+    },
+  };
+}
+
+function card<T extends { listingId: string; field: string }>(cards: T[], listingId: string, field: string): T {
+  const found = cards.find((item) => item.listingId === listingId && item.field === field);
+  if (!found) throw new Error(`missing ${listingId} ${field}`);
+  return found;
+}
+
+function diffCells(csv: string, listingId: string, field: string): string[] {
+  const line = csv.trim().split("\n").find((item) => item.includes(`,${listingId},${field},`));
+  if (!line) throw new Error(`missing diff ${listingId} ${field}`);
+  return line.split(",");
+}
+
+function restoreEnv(name: "RUN_LIMIT" | "RUN_OFFSET", previous: string | undefined): void {
+  if (previous === undefined) delete process.env[name];
+  else process.env[name] = previous;
 }
