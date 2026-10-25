@@ -2,7 +2,7 @@
 
 ## Stack
 TypeScript (Node 20) in services/agents and apps/web; Java 17 + Spring Boot 3 in services/gateway;
-Postgres 16; Zetaris over JDBC. Product models are NVIDIA Nemotron (Super and Lightning).
+Postgres 16; Zetaris over JDBC. Product models are NVIDIA Nemotron (Ultra and Lightning).
 
 ## Lanes (stay in yours)
 - services/gateway: Person A

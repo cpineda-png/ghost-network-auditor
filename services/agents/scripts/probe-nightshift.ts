@@ -26,8 +26,12 @@ function loadDotEnv() {
 let baseUrl = (process.env.NIGHTSHIFT_BASE_URL ?? "http://127.0.0.1:8088/v1").replace(/\/$/, "");
 let token = process.env.NIGHTSHIFT_TOKEN ?? "";
 
-function looksSuper(id: string): boolean {
-  return /super/i.test(id);
+export function looksSuper(id: string): boolean {
+  return /super|ultra/i.test(id);
+}
+
+function preferredPlanner(listed: string[]): string | undefined {
+  return listed.find((id) => /ultra/i.test(id)) ?? listed.find((id) => /super/i.test(id));
 }
 function looksLightning(id: string): boolean {
   return /lightning/i.test(id);
@@ -50,10 +54,10 @@ async function getJson(path: string, init?: RequestInit): Promise<{ status: numb
 function pickModels(listed: string[]): { planner?: string; worker?: string } {
   const configuredPlanner = process.env.NEMOTRON_PLANNER_MODEL;
   const configuredWorker = process.env.NEMOTRON_WORKER_MODEL;
-  const superId = listed.find(looksSuper);
+  const plannerId = preferredPlanner(listed);
   const lightningId = listed.find(looksLightning);
   return {
-    planner: configuredPlanner || superId || listed[0],
+    planner: configuredPlanner || plannerId || listed[0],
     worker: configuredWorker || lightningId || listed[1] || listed[0],
   };
 }
@@ -152,7 +156,7 @@ async function main() {
   const distinctRoles = picked.planner !== picked.worker;
   console.log(`Planner model: ${picked.planner}`);
   console.log(`Worker model: ${picked.worker}`);
-  console.log(`Super/Lightning pin per role: ${distinctRoles && canPinPlanner && canPinWorker ? "yes" : "uncertain"}`);
+  console.log(`Ultra/Lightning pin per role: ${distinctRoles && canPinPlanner && canPinWorker ? "yes" : "uncertain"}`);
   console.log(`Planner looks Super: ${looksSuper(picked.planner)}`);
   console.log(`Worker looks Lightning: ${looksLightning(picked.worker)}`);
 
