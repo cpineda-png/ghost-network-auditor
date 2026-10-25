@@ -1,8 +1,19 @@
+import { runRequestSchema } from "contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MockGateway } from "../gateway/mock.js";
 import type { LlmClient } from "../llm/nemotron.js";
 import { GnaWorldModel } from "../world/worldModel.js";
-import { CHUNK_SIZE, PLANNER_FAMILIES, chunkRows, plan, plannerOutputSchema, readRunLimit, readRunOffset } from "./planner.js";
+import {
+  CHUNK_SIZE,
+  PLANNER_FAMILIES,
+  chunkRows,
+  directoryParams,
+  plan,
+  plannerOutputSchema,
+  readRunLimit,
+  readRunOffset,
+  resolveRunWindow,
+} from "./planner.js";
 
 describe("planner output", () => {
   it("parses the live Ultra answer that sent risk as a label", () => {
@@ -127,6 +138,82 @@ describe("run size", () => {
   it("clamps 999 to 300", () => {
     process.env.RUN_LIMIT = "999";
     expect(readRunLimit()).toBe(300);
+  });
+});
+
+describe("run request window", () => {
+  const previousLimit = process.env.RUN_LIMIT;
+  const previousOffset = process.env.RUN_OFFSET;
+
+  beforeEach(() => {
+    delete process.env.RUN_LIMIT;
+    delete process.env.RUN_OFFSET;
+  });
+
+  afterEach(() => {
+    restoreEnv("RUN_LIMIT", previousLimit);
+    restoreEnv("RUN_OFFSET", previousOffset);
+  });
+
+  it("accepts optional offset and limit on the contract", () => {
+    expect(runRequestSchema.parse({
+      scope: { batch: "B", offset: 160, limit: 30 },
+      useMemory: false,
+    })).toEqual({
+      scope: { batch: "B", offset: 160, limit: 30 },
+      useMemory: false,
+    });
+    expect(runRequestSchema.parse({ scope: { batch: "A" } })).toEqual({ scope: { batch: "A" } });
+    expect(runRequestSchema.safeParse({ scope: { batch: "A", limit: 0 } }).success).toBe(false);
+    expect(runRequestSchema.safeParse({ scope: { batch: "A", limit: 301 } }).success).toBe(false);
+    expect(runRequestSchema.safeParse({ scope: { batch: "A", offset: -1 } }).success).toBe(false);
+    expect(runRequestSchema.safeParse({ scope: { batch: "A", limit: 30.5 } }).success).toBe(false);
+  });
+
+  it("uses the scope window and falls back to the environment when it is absent", () => {
+    process.env.RUN_LIMIT = "50";
+    process.env.RUN_OFFSET = "7";
+    expect(resolveRunWindow({})).toEqual({ limit: 50, offset: 7 });
+    expect(directoryParams({ batch: "A" })).toEqual({ batch: "A", limit: 50, offset: 7 });
+    expect(directoryParams({ batch: "B", county: "Sangamon", offset: 160, limit: 30 })).toEqual({
+      batch: "B",
+      county: "Sangamon",
+      limit: 30,
+      offset: 160,
+    });
+    expect(resolveRunWindow({ limit: 999, offset: -3 })).toEqual({ limit: 300, offset: 0 });
+  });
+
+  it("queries directory_batch with the scope window", async () => {
+    process.env.RUN_LIMIT = "50";
+    process.env.RUN_OFFSET = "7";
+    const gateway = new MockGateway();
+    const query = vi.spyOn(gateway, "query");
+    const llm: LlmClient = {
+      chatJson: vi.fn().mockResolvedValue({
+        data: plannerOutputSchema.parse({
+          rankings: [{ chunkIndex: 0, risk: 0.2, templates: ["roster_by_npis"] }],
+          rationale: "window",
+        }),
+        model: "super",
+        latencyMs: 1,
+        replayed: true,
+        meterlessReceiptId: "mtr-window",
+        routedModel: "nvidia/nemotron-super",
+      }),
+    };
+    await plan({
+      request: { scope: { batch: "A", offset: 0, limit: 30 }, useMemory: false },
+      runId: "run-window",
+      gateway,
+      world: new GnaWorldModel(),
+      llm,
+    });
+    expect(query).toHaveBeenCalledWith(
+      "directory_batch",
+      { batch: "A", limit: 30, offset: 0 },
+      "run-window",
+    );
   });
 });
 

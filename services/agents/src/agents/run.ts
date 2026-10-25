@@ -13,7 +13,7 @@ import {
   npisFromRows,
   type Investigation,
 } from "./investigator.js";
-import { chunkRows, plan, readRunLimit, readRunOffset } from "./planner.js";
+import { chunkRows, plan, resolveRunWindow } from "./planner.js";
 import { decideRisk } from "./risk.js";
 
 export const DIFF_HEADER =
@@ -144,8 +144,7 @@ async function runContact(input: {
   llm: LlmClient;
 }): Promise<RunOutcome> {
   const useMemory = input.request.useMemory ?? true;
-  const limit = readRunLimit();
-  const offset = readRunOffset();
+  const { limit, offset } = resolveRunWindow(input.request.scope);
   console.log(`RUN scope=${input.request.scope.batch} limit=${limit} offset=${offset} useMemory=${useMemory}`);
   const modelCounts = new Map<string, number>();
   const llm = countModels(input.llm, modelCounts);

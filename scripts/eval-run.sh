@@ -10,6 +10,8 @@ memory=""
 agents_url="http://localhost:8080"
 out_dir=""
 timeout_min="45"
+offset=""
+limit=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -54,6 +56,22 @@ while [[ $# -gt 0 ]]; do
       timeout_min=$2
       shift 2
       ;;
+    --offset)
+      if [[ $# -lt 2 ]]; then
+        echo "Missing value for --offset" >&2
+        exit 2
+      fi
+      offset=$2
+      shift 2
+      ;;
+    --limit)
+      if [[ $# -lt 2 ]]; then
+        echo "Missing value for --limit" >&2
+        exit 2
+      fi
+      limit=$2
+      shift 2
+      ;;
     *)
       echo "Unknown argument: $1" >&2
       exit 2
@@ -73,6 +91,20 @@ if ! [[ "$timeout_min" =~ ^[0-9]+$ ]] || [[ "$timeout_min" -lt 1 ]]; then
   echo "Expected --timeout-min to be a positive integer" >&2
   exit 2
 fi
+if [[ -n "$offset" ]]; then
+  if ! [[ "$offset" =~ ^[0-9]+$ ]] || [[ "$offset" -gt 1000000 ]]; then
+    echo "Expected --offset to be an integer from 0 to 1000000" >&2
+    exit 2
+  fi
+  offset=$((10#$offset))
+fi
+if [[ -n "$limit" ]]; then
+  if ! [[ "$limit" =~ ^[0-9]+$ ]] || [[ "$limit" -lt 1 ]] || [[ "$limit" -gt 300 ]]; then
+    echo "Expected --limit to be an integer from 1 to 300" >&2
+    exit 2
+  fi
+  limit=$((10#$limit))
+fi
 
 agents_url=${agents_url%/}
 if [[ -z "$out_dir" ]]; then
@@ -90,7 +122,15 @@ if [[ "$memory" == "on" ]]; then
 else
   use_memory=false
 fi
-body="{\"scope\":{\"batch\":\"${batch}\"},\"useMemory\":${use_memory}}"
+scope="{\"batch\":\"${batch}\""
+if [[ -n "$offset" ]]; then
+  scope+=",\"offset\":${offset}"
+fi
+if [[ -n "$limit" ]]; then
+  scope+=",\"limit\":${limit}"
+fi
+scope+="}"
+body="{\"scope\":${scope},\"useMemory\":${use_memory}}"
 score="$root/eval/score.py"
 
 if [[ "$dry_run" -eq 1 ]]; then
