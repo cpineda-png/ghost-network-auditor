@@ -1,21 +1,40 @@
 import { useEffect, useState } from "react";
-import { getDiffCsv, usingFixtures } from "../api";
+import { errorText, getDiffCsv, usingFixtures } from "../api";
 import type { RunReport, TrustRow } from "../types";
+
+type LoadState = "idle" | "loading" | "ready" | "error";
 
 type Props = {
   trust: TrustRow[];
+  trustState: LoadState;
+  trustError: string | null;
   cold: RunReport | null;
   warm: RunReport | null;
+  report: RunReport | null;
+  reportState: LoadState;
+  reportError: string | null;
   runId: string | null;
 };
 
-export function MemoryResults({ trust, cold, warm, runId }: Props) {
-  const href = useDiffHref(runId);
+export function MemoryResults({
+  trust,
+  trustState,
+  trustError,
+  cold,
+  warm,
+  report,
+  reportState,
+  reportError,
+  runId,
+}: Props) {
+  const diff = useDiffHref(runId);
 
   return (
     <div>
       <h3>Trust</h3>
-      {trust.length === 0 ? (
+      {trustState === "loading" ? <p>Loading trust…</p> : null}
+      {trustError ? <p role="alert">{trustError}</p> : null}
+      {trustState === "loading" ? null : trust.length === 0 ? (
         <p className="muted">No trust rows.</p>
       ) : (
         <table>
@@ -43,32 +62,57 @@ export function MemoryResults({ trust, cold, warm, runId }: Props) {
           </tbody>
         </table>
       )}
+      <h3>Report</h3>
+      {reportState === "loading" ? <p>Loading report…</p> : null}
+      {reportError ? <p role="alert">{reportError}</p> : null}
+      {report ? (
+        <ul className="counts">
+          <li>Applied {report.applied}</li>
+          <li>Escalated {report.escalated}</li>
+          <li>Ghosts {report.ghosts}</li>
+          <li>Memory hits {report.memoryHits}</li>
+          <li>Models {modelText(report.models)}</li>
+        </ul>
+      ) : reportState === "loading" || reportError ? null : (
+        <p className="muted">No report yet.</p>
+      )}
       <h3>Cold versus warm</h3>
       <ul className="counts">
         <li>Cold escalations {cold ? cold.escalated : "—"}</li>
         <li>Warm escalations {warm ? warm.escalated : "—"}</li>
       </ul>
-      {href ? (
-        <a href={href} download={`diff-${runId ?? "run"}.csv`}>
-          diff.csv
+      {diff.loading ? <p>Loading diff…</p> : null}
+      {diff.error ? <p role="alert">{diff.error}</p> : null}
+      {diff.href ? (
+        <a href={diff.href} download={`diff-${runId ?? "run"}.csv`}>
+          Download diff.csv
         </a>
-      ) : (
-        <p className="muted">diff.csv unavailable</p>
-      )}
+      ) : null}
     </div>
   );
 }
 
-function useDiffHref(runId: string | null): string | null {
+function modelText(models: RunReport["models"]): string {
+  if (models.length === 0) return "none";
+  return models.map((item) => `${item.model} (${item.calls})`).join(", ");
+}
+
+function useDiffHref(runId: string | null): { href: string | null; error: string | null; loading: boolean } {
   const [href, setHref] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   useEffect(() => {
     if (!runId && !usingFixtures()) {
       setHref(null);
+      setError(null);
+      setLoading(false);
       return;
     }
     const id = runId ?? "run-cold";
     let objectUrl: string | undefined;
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     getDiffCsv(id)
       .then((csv) => {
         if (cancelled) return;
@@ -79,13 +123,19 @@ function useDiffHref(runId: string | null): string | null {
           setHref(`/api/runs/${encodeURIComponent(id)}/diff.csv`);
         }
       })
-      .catch(() => {
-        if (!cancelled) setHref(null);
+      .catch((reason: unknown) => {
+        if (!cancelled) {
+          setHref(null);
+          setError(errorText(reason));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [runId]);
-  return href;
+  return { href, error, loading };
 }

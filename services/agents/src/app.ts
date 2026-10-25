@@ -147,6 +147,15 @@ export function createApp(deps: AppDeps = {}) {
     }
   });
 
+  app.post("/receipts/:id/replay", async (req, res) => {
+    try {
+      const replay = await gateway.replay(req.params.id);
+      res.json(replay);
+    } catch (error) {
+      res.status(404).json({ error: error instanceof Error ? error.message : "not found" });
+    }
+  });
+
   return app;
 }
 

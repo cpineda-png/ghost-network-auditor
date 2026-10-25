@@ -1,20 +1,45 @@
 import { listingName } from "../fixtures";
-import { formatValue } from "../format";
-import { THRESHOLDS, type EvidenceCard } from "../types";
+import { formatValue, isPossibleGhost } from "../format";
+import { THRESHOLDS, type EvidenceCard, type Ruling } from "../types";
+import { RulingForm } from "./OutreachQueue";
 
 type Props = {
   cards: EvidenceCard[];
+  runId: string | null;
+  loading: boolean;
+  error: string | null;
+  settled: boolean;
+  memoryIds: Record<string, string>;
   onOpenReceipt: (receiptId: string) => void;
+  onSubmitRuling: (ruling: Ruling) => Promise<string>;
 };
 
-export function EvidenceCards({ cards, onOpenReceipt }: Props) {
+export function EvidenceCards({
+  cards,
+  runId,
+  loading,
+  error,
+  settled,
+  memoryIds,
+  onOpenReceipt,
+  onSubmitRuling,
+}: Props) {
+  if (loading) return <p>Loading evidence…</p>;
+  if (error) return <p role="alert">{error}</p>;
   if (cards.length === 0) {
-    return <p className="muted">Start a run to load evidence cards.</p>;
+    return <p className="muted">{settled ? "No evidence cards." : "Start a run to load evidence cards."}</p>;
   }
   return (
     <div className="card-list">
       {cards.map((card) => (
-        <EvidenceCardView key={`${card.listingId}:${card.field}`} card={card} onOpenReceipt={onOpenReceipt} />
+        <EvidenceCardView
+          key={`${card.listingId}:${card.field}`}
+          card={card}
+          runId={runId}
+          memoryId={memoryIds[`${card.listingId}:${card.field}`] ?? null}
+          onOpenReceipt={onOpenReceipt}
+          onSubmitRuling={onSubmitRuling}
+        />
       ))}
     </div>
   );
@@ -22,20 +47,54 @@ export function EvidenceCards({ cards, onOpenReceipt }: Props) {
 
 export function EvidenceCardView({
   card,
+  runId = null,
+  memoryId = null,
   onOpenReceipt,
+  onSubmitRuling,
 }: {
   card: EvidenceCard;
+  runId?: string | null;
+  memoryId?: string | null;
   onOpenReceipt: (receiptId: string) => void;
+  onSubmitRuling?: (ruling: Ruling) => Promise<string>;
 }) {
   const shownStatus =
     card.confidence !== null && card.confidence < THRESHOLDS.retryFloor ? "escalated" : card.status;
+  const directory = card.sources.find((source) => source.source === "directory");
+  const ghost = isPossibleGhost(card);
 
   return (
     <article className="evidence-card">
       <h3>
         {listingName(card.listingId)} · {card.field}
       </h3>
-      <p role="status">{shownStatus}</p>
+      {ghost ? <p className="needs-human">Possible ghost, needs analyst</p> : null}
+      <dl>
+        <div>
+          <dt>Field</dt>
+          <dd>{card.field}</dd>
+        </div>
+        <div>
+          <dt>Old value</dt>
+          <dd>{directory ? formatValue(directory.value) : "none"}</dd>
+        </div>
+        <div>
+          <dt>New value</dt>
+          <dd>{card.winner ? formatValue(card.winner.value) : "none"}</dd>
+        </div>
+        <div>
+          <dt>Winning source</dt>
+          <dd>{card.winner ? card.winner.source : "none"}</dd>
+        </div>
+        <div>
+          <dt>Confidence</dt>
+          <dd>{card.confidence === null ? "none" : card.confidence.toFixed(2)}</dd>
+        </div>
+        <div>
+          <dt>Status</dt>
+          <dd role="status">{shownStatus}</dd>
+        </div>
+      </dl>
       <p>{thresholdText(card.confidence)}</p>
       <ul>
         {card.sources.map((source) => (
@@ -69,6 +128,16 @@ export function EvidenceCardView({
         <p>No critic verdict</p>
       )}
       <p>Memory: {card.memoryIds.length > 0 ? card.memoryIds.join(", ") : "none"}</p>
+      {ghost && runId && onSubmitRuling ? (
+        <RulingForm
+          formId="card"
+          runId={runId}
+          card={card}
+          memoryId={memoryId}
+          showGhostLabel={false}
+          onSubmit={onSubmitRuling}
+        />
+      ) : null}
     </article>
   );
 }

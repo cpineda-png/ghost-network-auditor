@@ -61,10 +61,15 @@ services:
       PORT: "8080"
       GATEWAY_URL: http://gateway:8081
       LLM_REPLAY: ${LLM_REPLAY}
-      NIGHTSHIFT_BASE_URL: ${NIGHTSHIFT_BASE_URL}
+      LLM_RECORD: ${LLM_RECORD:-false}
+      RUN_LIMIT: ${RUN_LIMIT:-10}
+      RUN_OFFSET: ${RUN_OFFSET:-0}
+      NIGHTSHIFT_BASE_URL: ${NIGHTSHIFT_DOCKER_BASE_URL:-http://host.docker.internal:8088/v1}
       NIGHTSHIFT_TOKEN: ${NIGHTSHIFT_TOKEN}
       NEMOTRON_PLANNER_MODEL: ${NEMOTRON_PLANNER_MODEL}
       NEMOTRON_WORKER_MODEL: ${NEMOTRON_WORKER_MODEL}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       gateway:
         condition: service_healthy
