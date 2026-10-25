@@ -144,6 +144,12 @@ fieldset label {
   color: #666;
 }
 
+[role="alert"] {
+  background: #f3d6c8;
+  padding: 8px 12px;
+  margin: 0 0 16px;
+}
+
 .run-mode {
   font-weight: bold;
 }

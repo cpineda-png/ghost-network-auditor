@@ -12,6 +12,11 @@ const ACTORS = [
   "human",
 ] as const;
 
+const HIDDEN_WHEN_EMPTY = new Set<(typeof ACTORS)[number]>([
+  "investigator.status",
+  "investigator.specialty",
+]);
+
 const ACTOR_LABEL: Record<(typeof ACTORS)[number], string> = {
   planner: "Planner",
   "investigator.contact": "Investigator (contact)",
@@ -48,6 +53,7 @@ export function LiveRun({ events, report, settled }: Props) {
       ) : null}
       {ACTORS.map((actor) => {
         const rows = events.filter((event) => event.actor === actor);
+        if (rows.length === 0 && HIDDEN_WHEN_EMPTY.has(actor)) return null;
         return (
           <section key={actor} className="actor-group" aria-label={ACTOR_LABEL[actor]}>
             <h3>
