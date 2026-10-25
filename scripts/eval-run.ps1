@@ -9,6 +9,8 @@ $memory = ""
 $agentsUrl = "http://localhost:8080"
 $outDir = ""
 $timeoutMin = "45"
+$offset = ""
+$limit = ""
 
 for ($i = 0; $i -lt $args.Count; $i++) {
     switch ($args[$i]) {
@@ -38,6 +40,16 @@ for ($i = 0; $i -lt $args.Count; $i++) {
             $i++
             $timeoutMin = $args[$i]
         }
+        "--offset" {
+            if ($i + 1 -ge $args.Count) { Write-Error "Missing value for --offset"; exit 2 }
+            $i++
+            $offset = $args[$i]
+        }
+        "--limit" {
+            if ($i + 1 -ge $args.Count) { Write-Error "Missing value for --limit"; exit 2 }
+            $i++
+            $limit = $args[$i]
+        }
         default {
             Write-Error "Unknown argument: $($args[$i])"
             exit 2
@@ -58,6 +70,20 @@ if ($timeoutMin -notmatch '^\d+$' -or [int]$timeoutMin -lt 1) {
     exit 2
 }
 $timeoutMin = [int]$timeoutMin
+if ($offset -ne "") {
+    if ($offset -notmatch '^\d+$' -or [int64]$offset -gt 1000000) {
+        Write-Error "Expected --offset to be an integer from 0 to 1000000"
+        exit 2
+    }
+    $offset = [string][int64]$offset
+}
+if ($limit -ne "") {
+    if ($limit -notmatch '^\d+$' -or [int]$limit -lt 1 -or [int]$limit -gt 300) {
+        Write-Error "Expected --limit to be an integer from 1 to 300"
+        exit 2
+    }
+    $limit = [string][int]$limit
+}
 
 $agentsUrl = $agentsUrl.TrimEnd("/")
 if (-not $outDir) {
@@ -71,7 +97,11 @@ if (-not (Test-Path (Join-Path $root "docker-compose.yml"))) {
 }
 
 $useMemory = if ($memory -eq "on") { "true" } else { "false" }
-$body = "{`"scope`":{`"batch`":`"$batch`"},`"useMemory`":$useMemory}"
+$scope = "{`"batch`":`"$batch`""
+if ($offset -ne "") { $scope += ",`"offset`":$offset" }
+if ($limit -ne "") { $scope += ",`"limit`":$limit" }
+$scope += "}"
+$body = "{`"scope`":$scope,`"useMemory`":$useMemory}"
 $score = Join-Path $root "eval\score.py"
 
 if ($dryRun) {

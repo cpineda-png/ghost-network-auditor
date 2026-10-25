@@ -98,6 +98,30 @@ bash scripts/eval-run.sh --batch A --memory off
 bash scripts/eval-run.sh --batch A --memory off --dry-run
 ```
 
-`--batch` is `A` or `B`. `--memory` is `on` or `off` (`useMemory` true or false). `--agents-url` defaults to `http://localhost:8080`. `--out-dir` defaults to `eval/runs/` (gitignored). `--timeout-min` defaults to 45.
+`--batch` is `A` or `B`. `--memory` is `on` or `off` (`useMemory` true or false). `--offset` and `--limit`, when set, are sent on `scope` (`offset` 0 to 1000000, `limit` 1 to 300). When they are omitted, the agents service uses `RUN_OFFSET` and `RUN_LIMIT`. `--agents-url` defaults to `http://localhost:8080`. `--out-dir` defaults to `eval/runs/` (gitignored). `--timeout-min` defaults to 45.
 
-The script posts `{"scope":{"batch":"A"},"useMemory":false}`, prints `runId`, and polls `GET /runs/:id/report` every 10 seconds until the response is not 404. Each poll prints elapsed seconds. A report with `status: "failed"` prints `error` and exits 1. A finished run writes `report.json` and `diff.csv` to `eval/runs/<batch>-<memory>-<runId8>/`, then runs `eval/score.py --diff <diff.csv> --touched-only`. `--dry-run` prints those requests and does not send them.
+The script posts `{"scope":{"batch":"A"},"useMemory":false}` when offset and limit are omitted. `--offset 0 --limit 30` posts `{"scope":{"batch":"A","offset":0,"limit":30},"useMemory":false}`. It prints `runId`, and polls `GET /runs/:id/report` every 10 seconds until the response is not 404. Each poll prints elapsed seconds. A report with `status: "failed"` prints `error` and exits 1. A finished run writes `report.json` and `diff.csv` to `eval/runs/<batch>-<memory>-<runId8>/`, then runs `eval/score.py --diff <diff.csv> --touched-only`. `--dry-run` prints those requests and does not send them.
+
+## Cold vs warm
+
+A simulated analyst using the answer key reads escalated cards from the cold batch A run and posts a `Ruling` for each one. A label row, including a decoy, supplies `true_value` and the card source that normalizes to it. A card with no label keeps the directory value. The `analyst` field is `simulated-analyst`. Batch B then runs with memory on. The analyst and both runs share one agents process. `MeterlessHMem` in `services/agents/src/memory/hmem.ts` builds H-MEM with `{ actor: "gna" }` and no `persistDir`. The reference store writes `state.json` only when `persistDir` is set, so a restart drops the rulings. Start agents once with the Live run commands above and leave that process up.
+
+Batch A uses offset 0 and limit 30 (`L-00001` through `L-00030`, including the 9 Sunrise address errors). Batch B uses offset 160 and limit 30 (`L-00461` through `L-00490`). That window holds the 4 Sunrise address errors on `L-00471` through `L-00474`. Listings after `L-00474` in the window have no planted error, so a correct run leaves them unchanged.
+
+```powershell
+.\scripts\cold-warm.ps1
+.\scripts\cold-warm.ps1 --with-control
+.\scripts\cold-warm.ps1 --dry-run
+.\scripts\cold-warm.ps1 --with-control --dry-run
+```
+
+```bash
+bash scripts/cold-warm.sh
+bash scripts/cold-warm.sh --with-control
+bash scripts/cold-warm.sh --dry-run
+bash scripts/cold-warm.sh --with-control --dry-run
+```
+
+`--with-control` adds a third run: batch B with memory off, same offset and limit. `useMemory: false` skips recall and trust, so that run stays cold after the rulings are posted. The script writes `eval/reports/cold_vs_warm.md` for cold A against warm B, and `eval/reports/batch_b_control.md` for cold B against warm B.
+
+A live `eval-run` at `RUN_LIMIT=50` takes minutes. This script posts `limit` 30 on each run, so each window is 30 listings and still takes minutes. The default script is two windows plus at most 30 rulings. `--with-control` is three windows. `--max` defaults to 30. `--agents-url` defaults to `http://localhost:8080`. `--timeout-min` defaults to 45 per window. `--dry-run` prints the requests and does not send them.

@@ -145,6 +145,13 @@ export function readRunOffset(raw = process.env.RUN_OFFSET): number {
   return parsed;
 }
 
+export function resolveRunWindow(scope: { limit?: number; offset?: number }): { limit: number; offset: number } {
+  return {
+    limit: scope.limit === undefined ? readRunLimit() : readRunLimit(String(scope.limit)),
+    offset: scope.offset === undefined ? readRunOffset() : readRunOffset(String(scope.offset)),
+  };
+}
+
 function parseRunInteger(raw: string | undefined): number | null {
   if (raw === undefined) return null;
   const trimmed = raw.trim();
@@ -154,11 +161,12 @@ function parseRunInteger(raw: string | undefined): number | null {
   return parsed;
 }
 
-function directoryParams(scope: { batch: string; county?: string; specialty?: string }): Record<string, unknown> {
+export function directoryParams(scope: RunRequest["scope"]): Record<string, unknown> {
+  const window = resolveRunWindow(scope);
   const params: Record<string, unknown> = {
     batch: scope.batch,
-    limit: readRunLimit(),
-    offset: readRunOffset(),
+    limit: window.limit,
+    offset: window.offset,
   };
   if (typeof scope.county === "string") params.county = scope.county;
   if (typeof scope.specialty === "string") params.specialty = scope.specialty;

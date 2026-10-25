@@ -291,7 +291,13 @@ const nullableValueSchema = z.union([z.string(), z.boolean(), z.null()]);
 const rulingSourceSchema = z.union([sourceSchema, z.literal("other")]);
 
 export type RunRequest = {
-  scope: { batch: "A" | "B"; county?: string; specialty?: string };
+  scope: {
+    batch: "A" | "B";
+    county?: string;
+    specialty?: string;
+    offset?: number;
+    limit?: number;
+  };
   useMemory?: boolean;
 };
 
@@ -300,6 +306,8 @@ export const runRequestSchema: z.ZodType<RunRequest> = z.object({
     batch: z.enum(["A", "B"]),
     county: z.string().optional(),
     specialty: z.string().optional(),
+    offset: z.number().int().min(0).max(1000000).optional(),
+    limit: z.number().int().min(1).max(300).optional(),
   }),
   useMemory: z.boolean().optional(),
 });
