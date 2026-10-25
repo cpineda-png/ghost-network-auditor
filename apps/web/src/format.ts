@@ -15,6 +15,10 @@ export function typedRulingValue(field: Field, typed: string): string | boolean 
   return typed;
 }
 
+export function isPossibleGhost(card: EvidenceCard): boolean {
+  return card.status === "escalated" && (card.field === "status" || card.field === "accepting");
+}
+
 export function needsHuman(card: EvidenceCard): { ghost: boolean; notAccepting: boolean } {
   const ghost =
     card.sources.some((source) => source.source === "roster" && source.value === "terminated") &&

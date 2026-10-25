@@ -10,6 +10,7 @@ import {
 import {
   evidenceCardSchema,
   receiptSchema,
+  replayResponseSchema,
   rulingSchema,
   runReportSchema,
   runRequestSchema,
@@ -17,6 +18,7 @@ import {
   wmEventSchema,
   type EvidenceCard,
   type Receipt,
+  type ReplayResponse,
   type Ruling,
   type RunReport,
   type RunRequest,
@@ -33,6 +35,13 @@ const READY_ATTEMPTS = 8;
 const READY_DELAY_MS = 150;
 
 const rulingStoredSchema = z.object({ memoryId: z.string() });
+const reportExtraSchema = z.object({
+  status: z.string().optional(),
+  error: z.string().optional(),
+});
+
+export type RulingStored = { memoryId: string };
+export type RunReportView = RunReport & { status?: "failed"; error?: string };
 
 export type StreamDone = { ok: boolean };
 
@@ -123,13 +132,12 @@ export async function getCards(runId: string): Promise<EvidenceCard[]> {
   return read(evidenceCardSchema.array(), await getJson(`/runs/${encodeURIComponent(runId)}/cards`, true), "cards");
 }
 
-export async function postRuling(ruling: Ruling): Promise<Ruling> {
+export async function postRuling(ruling: Ruling): Promise<RulingStored> {
   const body = rulingSchema.parse(ruling);
   if (usingFixtures()) {
-    return body;
+    return { memoryId: "fixture-memory" };
   }
-  read(rulingStoredSchema, await postJson("/rulings", body), "rulings");
-  return body;
+  return read(rulingStoredSchema, await postJson("/rulings", body), "rulings");
 }
 
 export async function getTrust(): Promise<TrustRow[]> {
@@ -139,15 +147,15 @@ export async function getTrust(): Promise<TrustRow[]> {
   return read(trustRowSchema.array(), await getJson("/memory/trust"), "trust");
 }
 
-export async function getReport(runId: string): Promise<RunReport> {
+export async function getReport(runId: string): Promise<RunReportView> {
   if (usingFixtures()) {
     const report = fixtureRun(runId)?.report;
     if (!report) {
       throw new Error(`Unknown run ${runId}`);
     }
-    return runReportSchema.parse(report);
+    return readReport(report);
   }
-  return read(runReportSchema, await getJson(`/runs/${encodeURIComponent(runId)}/report`, true), "report");
+  return readReport(await getJson(`/runs/${encodeURIComponent(runId)}/report`, true));
 }
 
 export async function getDiffCsv(runId: string): Promise<string> {
@@ -156,6 +164,27 @@ export async function getDiffCsv(runId: string): Promise<string> {
   }
   const response = await request(`/runs/${encodeURIComponent(runId)}/diff.csv`, undefined, true);
   return response.text();
+}
+
+export async function replayReceipt(receiptId: string): Promise<ReplayResponse> {
+  if (usingFixtures()) {
+    const receipt = fixtureReceipts.find((item) => item.receiptId === receiptId);
+    if (!receipt) {
+      throw new Error(`Unknown receipt ${receiptId}`);
+    }
+    return {
+      receiptId,
+      match: true,
+      originalRowsHash: receipt.rowsHash,
+      newRowsHash: receipt.rowsHash,
+      rows: receipt.rowsPreview,
+    };
+  }
+  return read(
+    replayResponseSchema,
+    await postJson(`/receipts/${encodeURIComponent(receiptId)}/replay`, {}),
+    "replay",
+  );
 }
 
 export async function getReceipt(receiptId: string): Promise<Receipt> {
@@ -214,6 +243,15 @@ function messageFromBody(text: string, status: number): string {
   }
   if (text.trim().length > 0) return text;
   return `Request failed: ${status}`;
+}
+
+function readReport(data: unknown): RunReportView {
+  const report = read(runReportSchema, data, "report");
+  const extra = reportExtraSchema.safeParse(data);
+  if (extra.success && extra.data.status === "failed") {
+    return { ...report, status: "failed", error: extra.data.error ?? "run failed" };
+  }
+  return report;
 }
 
 function read<T>(schema: z.ZodType<T>, data: unknown, label: string): T {

@@ -1,5 +1,6 @@
+import type { RunReportView } from "../api";
 import { listingName } from "../fixtures";
-import type { RunReport, WmEvent } from "../types";
+import type { WmEvent } from "../types";
 
 const ACTORS = [
   "planner",
@@ -30,17 +31,22 @@ const ACTOR_LABEL: Record<(typeof ACTORS)[number], string> = {
 
 type Props = {
   events: WmEvent[];
-  report: RunReport | null;
+  report: RunReportView | null;
   settled: boolean;
+  running: boolean;
 };
 
-export function LiveRun({ events, report, settled }: Props) {
+export function LiveRun({ events, report, settled, running }: Props) {
   const applied = events.filter((event) => event.type === "applied").length;
   const escalated = events.filter((event) => event.type === "escalated").length;
   const retried = events.filter((event) => event.type === "retry_requested").length;
 
   return (
     <div>
+      {running && events.length === 0 ? <p>Waiting for events…</p> : null}
+      {report?.status === "failed" ? (
+        <p role="alert">run failed: {report.error ?? "unknown error"}</p>
+      ) : null}
       <ul className="counts">
         <li>Applied {applied}</li>
         <li>Escalated {escalated}</li>

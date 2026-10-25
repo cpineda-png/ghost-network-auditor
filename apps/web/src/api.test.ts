@@ -92,6 +92,18 @@ describe("agents api", () => {
       if (url === "/api/memory/trust") return json([trust]);
       if (url === "/api/runs/run-1/diff.csv") return new Response("listing_id,field\n", { status: 200 });
       if (url === "/api/receipts/rcpt-1") return json(receipt);
+      if (url === "/api/receipts/rcpt-1/replay" && init?.method === "POST") {
+        return json({
+          receiptId: "rcpt-1",
+          match: false,
+          originalRowsHash: receipt.rowsHash,
+          newRowsHash: "other",
+          rows: [],
+        });
+      }
+      if (url === "/api/runs/run-failed/report") {
+        return json({ ...report, runId: "run-failed", status: "failed", error: "nightshift down" });
+      }
       if (url === "/api/rulings" && init?.method === "POST") return json({ memoryId: "mem-1" });
       return json({ error: "missing" }, 500);
     });
@@ -121,6 +133,12 @@ describe("agents api", () => {
     await expect(api.getTrust()).resolves.toEqual([trust]);
     await expect(api.getDiffCsv("run-1")).resolves.toBe("listing_id,field\n");
     await expect(api.getReceipt("rcpt-1")).resolves.toEqual(receipt);
+    await expect(api.replayReceipt("rcpt-1")).resolves.toMatchObject({ receiptId: "rcpt-1", match: false });
+    await expect(api.getReport("run-failed")).resolves.toMatchObject({
+      runId: "run-failed",
+      status: "failed",
+      error: "nightshift down",
+    });
     await expect(
       api.postRuling({
         runId: "run-1",
@@ -130,7 +148,7 @@ describe("agents api", () => {
         source: "claims",
         analyst: "analyst",
       }),
-    ).resolves.toMatchObject({ source: "claims", value: "400 Harbor Ave" });
+    ).resolves.toEqual({ memoryId: "mem-1" });
 
     const done = new Promise<boolean>((resolve) => {
       api.streamEvents("run-1", (event) => events.push(event), (result) => resolve(result.ok));

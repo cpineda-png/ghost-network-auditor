@@ -245,6 +245,38 @@ async function waitForJson(base: string, path: string): Promise<{ status?: strin
   throw new Error(`timed out waiting for ${path}`);
 }
 
+describe("POST /receipts/:id/replay", () => {
+  it("returns the gateway replay match", async () => {
+    const gateway = new MockGateway();
+    const queried = await gateway.query("directory_batch", { batch: "A", limit: 1 }, "run-replay");
+    const app = createApp({ gateway, fetchImpl: vi.fn() });
+    const server = await listen(app);
+    try {
+      const response = await fetch(`${server.url}/receipts/${queried.receipt.receiptId}/replay`, { method: "POST" });
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        receiptId: queried.receipt.receiptId,
+        match: true,
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("returns 404 when the receipt is missing", async () => {
+    const app = createApp({ gateway: new MockGateway(), fetchImpl: vi.fn() });
+    const server = await listen(app);
+    try {
+      const response = await fetch(`${server.url}/receipts/missing/replay`, { method: "POST" });
+      expect(response.status).toBe(404);
+      const body = (await response.json()) as { error: string };
+      expect(body.error).toContain("missing");
+    } finally {
+      await server.close();
+    }
+  });
+});
+
 describe("contracts", () => {
   it("rejects a claim with empty receiptIds", () => {
     const result = claimSchema.safeParse({

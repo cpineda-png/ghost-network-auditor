@@ -24,7 +24,7 @@ describe("outreach form", () => {
   it("submits a typed value as source other", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(undefined);
-    render(<OutreachQueue runId="run-cold" cards={[card]} onSubmit={onSubmit} />);
+    render(<OutreachQueue runId="run-cold" cards={[card]} memoryIds={{}} onSubmit={onSubmit} />);
 
     await user.type(screen.getByRole("textbox", { name: "Other value" }), "555-0199");
     await user.type(screen.getByRole("textbox", { name: "Note" }), "Called the office");
@@ -46,7 +46,7 @@ describe("outreach form", () => {
   it("submits the picked source when the other value is empty", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(undefined);
-    render(<OutreachQueue runId="run-cold" cards={[card]} onSubmit={onSubmit} />);
+    render(<OutreachQueue runId="run-cold" cards={[card]} memoryIds={{}} onSubmit={onSubmit} />);
 
     await user.click(screen.getByRole("radio", { name: /roster: 555-0144/ }));
     await user.click(screen.getByRole("button", { name: "Submit ruling" }));

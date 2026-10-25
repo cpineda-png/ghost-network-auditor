@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { listingName } from "../fixtures";
-import { formatValue, needsHuman, typedRulingValue } from "../format";
+import { formatValue, isPossibleGhost, needsHuman, typedRulingValue } from "../format";
 import { rulingSchema, type EvidenceCard, type Ruling, type Source } from "../types";
 
 type Props = {
   runId: string | null;
   cards: EvidenceCard[];
-  onSubmit: (ruling: Ruling) => Promise<void>;
+  memoryIds: Record<string, string>;
+  onSubmit: (ruling: Ruling) => Promise<string>;
 };
 
-export function OutreachQueue({ runId, cards, onSubmit }: Props) {
+export function OutreachQueue({ runId, cards, memoryIds, onSubmit }: Props) {
   const queue = cards.filter((card) => card.status === "escalated");
   if (!runId || queue.length === 0) {
     return <p className="muted">No escalations in this run.</p>;
@@ -17,7 +18,14 @@ export function OutreachQueue({ runId, cards, onSubmit }: Props) {
   return (
     <div className="card-list">
       {queue.map((card) => (
-        <OutreachForm key={`${card.listingId}:${card.field}`} runId={runId} card={card} onSubmit={onSubmit} />
+        <RulingForm
+          key={`${card.listingId}:${card.field}`}
+          formId="queue"
+          runId={runId}
+          card={card}
+          memoryId={memoryIds[`${card.listingId}:${card.field}`] ?? null}
+          onSubmit={onSubmit}
+        />
       ))}
     </div>
   );
@@ -59,29 +67,38 @@ export function buildRuling(draft: {
   });
 }
 
-function OutreachForm({
+export function RulingForm({
+  formId,
   runId,
   card,
+  memoryId,
+  showGhostLabel = true,
   onSubmit,
 }: {
+  formId: string;
   runId: string;
   card: EvidenceCard;
-  onSubmit: (ruling: Ruling) => Promise<void>;
+  memoryId: string | null;
+  showGhostLabel?: boolean;
+  onSubmit: (ruling: Ruling) => Promise<string>;
 }) {
   const [selected, setSelected] = useState<number | null>(null);
   const [typed, setTyped] = useState("");
   const [note, setNote] = useState("");
   const [analyst, setAnalyst] = useState("analyst");
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [pending, setPending] = useState(false);
   const human = needsHuman(card);
-  const group = `choice-${card.listingId}-${card.field}`;
+  const ghost = isPossibleGhost(card);
+  const locked = pending || memoryId !== null;
+  const group = `choice-${formId}-${card.listingId}-${card.field}`;
 
   return (
     <form
       className="outreach-form"
       onSubmit={(event) => {
         event.preventDefault();
+        if (locked) return;
         setError(null);
         try {
           const ruling = buildRuling({
@@ -93,14 +110,14 @@ function OutreachForm({
             selected: selected === null ? null : card.sources[selected],
             typed,
           });
+          setPending(true);
           void onSubmit(ruling)
-            .then(() => setSaved(true))
             .catch((reason: unknown) => {
-              setSaved(false);
               setError(reason instanceof Error ? reason.message : "Ruling failed");
-            });
+            })
+            .finally(() => setPending(false));
         } catch (reason) {
-          setSaved(false);
+          setPending(false);
           setError(reason instanceof Error ? reason.message : "Ruling failed");
         }
       }}
@@ -108,9 +125,10 @@ function OutreachForm({
       <h3>
         {listingName(card.listingId)} · {card.field}
       </h3>
-      {human.ghost ? <p className="needs-human">Needs a human: ghost listing</p> : null}
-      {human.notAccepting ? <p className="needs-human">Needs a human: not accepting change</p> : null}
-      <fieldset>
+      {showGhostLabel && ghost ? <p className="needs-human">Possible ghost, needs analyst</p> : null}
+      {!ghost && human.ghost ? <p className="needs-human">Needs a human: ghost listing</p> : null}
+      {!ghost && human.notAccepting ? <p className="needs-human">Needs a human: not accepting change</p> : null}
+      <fieldset disabled={locked}>
         <legend>Pick a value</legend>
         {card.sources.map((source, index) => (
           <label key={`${source.source}-${index}`}>
@@ -126,19 +144,21 @@ function OutreachForm({
       </fieldset>
       <label>
         Other value
-        <input value={typed} onChange={(event) => setTyped(event.target.value)} />
+        <input value={typed} disabled={locked} onChange={(event) => setTyped(event.target.value)} />
       </label>
       <label>
         Note
-        <textarea value={note} onChange={(event) => setNote(event.target.value)} />
+        <textarea value={note} disabled={locked} onChange={(event) => setNote(event.target.value)} />
       </label>
       <label>
         Analyst
-        <input value={analyst} onChange={(event) => setAnalyst(event.target.value)} />
+        <input value={analyst} disabled={locked} onChange={(event) => setAnalyst(event.target.value)} />
       </label>
       {error ? <p role="alert">{error}</p> : null}
-      {saved ? <p>Ruling recorded</p> : null}
-      <button type="submit">Submit ruling</button>
+      {memoryId ? <p>Memory {memoryId}</p> : null}
+      <button type="submit" disabled={locked}>
+        Submit ruling
+      </button>
     </form>
   );
 }
