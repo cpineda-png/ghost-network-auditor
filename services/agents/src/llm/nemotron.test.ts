@@ -7,11 +7,15 @@ import { EscalationError, ReplayMissError, createNemotronClient, readMaxTokens, 
 
 const schema = z.object({ ok: z.boolean() });
 
-function client(fetchImpl: typeof fetch, recordDir: string) {
+function client(
+  fetchImpl: typeof fetch,
+  recordDir: string,
+  models: { plannerModel?: string; workerModel?: string; token?: string } = {},
+) {
   return createNemotronClient({
-    token: "test",
-    plannerModel: "super",
-    workerModel: "lightning",
+    token: models.token ?? "test",
+    plannerModel: models.plannerModel ?? "super",
+    workerModel: models.workerModel ?? "lightning",
     baseURL: "http://nightshift/v1",
     fetchImpl,
     recordDir,
@@ -35,11 +39,63 @@ describe("chatJson", () => {
     const fetchImpl = vi.fn().mockImplementation(async () => {
       return new Response(JSON.stringify({ choices: [{ message: { content: "not-json" } }] }), { status: 200 });
     });
-    const llm = client(fetchImpl, mkdtempSync(join(tmpdir(), "llm-")));
-    await expect(llm.chatJson("planner", [{ role: "user", content: "hi" }], schema)).rejects.toBeInstanceOf(
-      EscalationError,
+    const llm = client(fetchImpl, mkdtempSync(join(tmpdir(), "llm-")), { workerModel: "super" });
+    await expect(llm.chatJson("planner", [{ role: "user", content: "hi" }], schema)).rejects.toThrow(
+      /model response failed schema validation after retry \(invalid json\) not-json/,
     );
     expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("names zod paths and the model content, and leaves the token out", async () => {
+    process.env.LLM_REPLAY = "false";
+    process.env.LLM_RECORD = "false";
+    const token = "nightshift-token-do-not-leak";
+    const tail = "TAIL-MARKER-NOT-IN-SNIPPET";
+    const content = `{"rankings":[{"risk":"low","note":"${"x".repeat(280)}"}],"tail":"${tail}"}`;
+    const fetchImpl = vi.fn().mockImplementation(async () => {
+      return new Response(JSON.stringify({ choices: [{ message: { content } }] }), { status: 200 });
+    });
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const shape = z.object({ rankings: z.array(z.object({ risk: z.number() })) });
+    const llm = client(fetchImpl, mkdtempSync(join(tmpdir(), "llm-")), { workerModel: "super", token });
+    let caught: unknown;
+    try {
+      await llm.chatJson("planner", [{ role: "user", content: "hi" }], shape);
+    } catch (error) {
+      caught = error;
+    }
+    const logged = [...log.mock.calls, ...err.mock.calls].flat().join(" ");
+    log.mockRestore();
+    err.mockRestore();
+    expect(caught).toBeInstanceOf(EscalationError);
+    const message = caught instanceof Error ? caught.message : "";
+    expect(message).toContain("rankings.0.risk: expected number");
+    expect(message).toContain(content.slice(0, 300));
+    expect(message).not.toContain(tail);
+    expect(message).not.toContain(token);
+    expect(message).not.toContain("Bearer");
+    expect(logged).not.toContain(token);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("falls back to the worker model when the planner model fails schema validation", async () => {
+    process.env.LLM_REPLAY = "false";
+    process.env.LLM_RECORD = "false";
+    const fetchImpl = vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { model: string };
+      const content = body.model === "lightning" ? "{\"ok\":true}" : "{\"ok\":\"no\"}";
+      return new Response(JSON.stringify({ choices: [{ message: { content } }] }), { status: 200 });
+    });
+    const llm = client(fetchImpl, mkdtempSync(join(tmpdir(), "llm-")));
+    const result = await llm.chatJson("planner", [{ role: "user", content: "hi" }], schema);
+    expect(result.data).toEqual({ ok: true });
+    expect(result.model).toBe("lightning");
+    const models = fetchImpl.mock.calls.map((call) => {
+      const init = call[1] as RequestInit;
+      return (JSON.parse(String(init.body)) as { model: string }).model;
+    });
+    expect(models).toEqual(["super", "super", "lightning"]);
   });
 
   it("replay mode makes no network call", async () => {

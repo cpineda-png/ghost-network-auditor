@@ -128,7 +128,11 @@ export async function investigateContact(input: {
       [
         {
           role: "system",
-          content: "Summarize these contact conflicts in one sentence. Do not invent values. Return JSON {summary}.",
+          content: [
+            "Summarize these contact conflicts in one sentence. Do not invent values. JSON only, no prose.",
+            'Return {"summary":"One sentence."}.',
+            "summary is a string.",
+          ].join(" "),
         },
         {
           role: "user",

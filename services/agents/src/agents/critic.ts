@@ -59,8 +59,13 @@ export async function criticize(input: {
       [
         {
           role: "system",
-          content:
-            "You are the critic. Decide whether the replayed rows support the proposed value. Return JSON {verdict: pass|revise|reject, reasons, failedReceiptIds}.",
+          content: [
+            "You are the critic. Decide whether the replayed rows support the proposed value. JSON only, no prose.",
+            'Return {"verdict":"pass","reasons":["rows support the value"],"failedReceiptIds":[]}.',
+            "verdict is one of pass, revise, reject.",
+            "reasons is an array of strings.",
+            "failedReceiptIds is an array of strings.",
+          ].join(" "),
         },
         {
           role: "user",
