@@ -153,8 +153,11 @@ export function createApp(deps: AppDeps = {}) {
 async function readNightshift(fetchImpl: typeof fetch, baseURL: string): Promise<"up" | "down"> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 3000);
+  const token = process.env.NIGHTSHIFT_TOKEN;
+  const headers: Record<string, string> = { "meterless-app": "ghost-network-auditor" };
+  if (token) headers.authorization = `Bearer ${token}`;
   try {
-    const response = await fetchImpl(`${baseURL}/models`, { signal: controller.signal });
+    const response = await fetchImpl(`${baseURL}/models`, { headers, signal: controller.signal });
     return response.ok ? "up" : "down";
   } catch {
     return "down";

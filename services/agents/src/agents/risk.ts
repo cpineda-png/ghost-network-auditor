@@ -12,7 +12,7 @@ export function decideRisk(input: {
   if (!input.conflict) return "unchanged";
   if (
     input.verdict === "pass" &&
-    (input.field === "address" || input.field === "phone") &&
+    (input.field === "address" || input.field === "phone" || input.field === "specialty") &&
     (input.confidence ?? 0) >= 0.7
   ) {
     return "applied";

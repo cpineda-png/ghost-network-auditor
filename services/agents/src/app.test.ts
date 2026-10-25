@@ -55,6 +55,36 @@ describe("GET /health", () => {
     }
   });
 
+  it("sends the Nightshift bearer token on the models check", async () => {
+    const previousToken = process.env.NIGHTSHIFT_TOKEN;
+    process.env.NIGHTSHIFT_TOKEN = "nightshift-token-do-not-leak";
+    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes("/models")) {
+        const headers = init?.headers as Record<string, string>;
+        expect(headers.authorization).toBe("Bearer nightshift-token-do-not-leak");
+        expect(headers["meterless-app"]).toBe("ghost-network-auditor");
+        return new Response("{}", { status: 200 });
+      }
+      return new Response(JSON.stringify({ zetaris: "not_configured", mode: "sample" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+    const app = createApp({ fetchImpl, gatewayUrl: "http://gateway" });
+    const server = await listen(app);
+    try {
+      const response = await fetch(`${server.url}/health`);
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as { nightshift: string };
+      expect(body.nightshift).toBe("up");
+      expect(fetchImpl).toHaveBeenCalled();
+    } finally {
+      if (previousToken === undefined) delete process.env.NIGHTSHIFT_TOKEN;
+      else process.env.NIGHTSHIFT_TOKEN = previousToken;
+      await server.close();
+    }
+  });
+
   it("reports nightshift down when the models call fails", async () => {
     const fetchImpl = vi.fn(async (url: string) => {
       if (url.includes("/models")) throw new Error("connect ECONNREFUSED 127.0.0.1:8088");
