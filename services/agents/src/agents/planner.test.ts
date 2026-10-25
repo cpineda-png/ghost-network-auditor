@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MockGateway } from "../gateway/mock.js";
 import type { LlmClient } from "../llm/nemotron.js";
 import { GnaWorldModel } from "../world/worldModel.js";
-import { CHUNK_SIZE, PLANNER_FAMILIES, chunkRows, plan, plannerOutputSchema } from "./planner.js";
+import { CHUNK_SIZE, PLANNER_FAMILIES, chunkRows, plan, plannerOutputSchema, readRunLimit, readRunOffset } from "./planner.js";
 
 describe("planner output", () => {
   it("parses the live Ultra answer that sent risk as a label", () => {
@@ -29,6 +29,19 @@ describe("planner output", () => {
 });
 
 describe("planner chunks", () => {
+  const previousLimit = process.env.RUN_LIMIT;
+  const previousOffset = process.env.RUN_OFFSET;
+
+  beforeEach(() => {
+    delete process.env.RUN_LIMIT;
+    delete process.env.RUN_OFFSET;
+  });
+
+  afterEach(() => {
+    restoreEnv("RUN_LIMIT", previousLimit);
+    restoreEnv("RUN_OFFSET", previousOffset);
+  });
+
   it("splits rows into chunks of 10 and one task per family", async () => {
     const rows = Array.from({ length: 21 }, (_, i) => ({ listing_id: `L-${i}` }));
     const chunks = chunkRows(rows, CHUNK_SIZE);
@@ -84,3 +97,40 @@ describe("planner chunks", () => {
     });
   });
 });
+
+describe("run size", () => {
+  const previousLimit = process.env.RUN_LIMIT;
+  const previousOffset = process.env.RUN_OFFSET;
+
+  afterEach(() => {
+    restoreEnv("RUN_LIMIT", previousLimit);
+    restoreEnv("RUN_OFFSET", previousOffset);
+  });
+
+  it("defaults to 10", () => {
+    delete process.env.RUN_LIMIT;
+    delete process.env.RUN_OFFSET;
+    expect(readRunLimit()).toBe(10);
+    expect(readRunOffset()).toBe(0);
+  });
+
+  it("reads 50 from the environment", () => {
+    process.env.RUN_LIMIT = "50";
+    expect(readRunLimit()).toBe(50);
+  });
+
+  it("uses 10 when the environment is garbage", () => {
+    process.env.RUN_LIMIT = "nope";
+    expect(readRunLimit()).toBe(10);
+  });
+
+  it("clamps 999 to 300", () => {
+    process.env.RUN_LIMIT = "999";
+    expect(readRunLimit()).toBe(300);
+  });
+});
+
+function restoreEnv(name: "RUN_LIMIT" | "RUN_OFFSET", value: string | undefined): void {
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+}

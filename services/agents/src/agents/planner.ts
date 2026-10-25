@@ -130,11 +130,35 @@ export async function plan(input: {
   };
 }
 
+const DEFAULT_RUN_LIMIT = 10;
+const MAX_RUN_LIMIT = 300;
+
+export function readRunLimit(raw = process.env.RUN_LIMIT): number {
+  const parsed = parseRunInteger(raw);
+  if (parsed === null) return DEFAULT_RUN_LIMIT;
+  return Math.min(MAX_RUN_LIMIT, Math.max(1, parsed));
+}
+
+export function readRunOffset(raw = process.env.RUN_OFFSET): number {
+  const parsed = parseRunInteger(raw);
+  if (parsed === null || parsed < 0) return 0;
+  return parsed;
+}
+
+function parseRunInteger(raw: string | undefined): number | null {
+  if (raw === undefined) return null;
+  const trimmed = raw.trim();
+  if (!/^-?\d+$/.test(trimmed)) return null;
+  const parsed = Number(trimmed);
+  if (!Number.isSafeInteger(parsed)) return null;
+  return parsed;
+}
+
 function directoryParams(scope: { batch: string; county?: string; specialty?: string }): Record<string, unknown> {
   const params: Record<string, unknown> = {
     batch: scope.batch,
-    limit: 10,
-    offset: 0,
+    limit: readRunLimit(),
+    offset: readRunOffset(),
   };
   if (typeof scope.county === "string") params.county = scope.county;
   if (typeof scope.specialty === "string") params.specialty = scope.specialty;
