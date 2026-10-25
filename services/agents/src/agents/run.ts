@@ -7,7 +7,7 @@ import { listingId, type GnaWorldModel } from "../world/worldModel.js";
 import { arbitrate } from "./arbiter.js";
 import { criticize } from "./critic.js";
 import { investigateContact } from "./investigator.js";
-import { plan } from "./planner.js";
+import { plan, readRunLimit, readRunOffset } from "./planner.js";
 import { decideRisk } from "./risk.js";
 
 export const DIFF_HEADER =
@@ -112,6 +112,9 @@ async function runContact(input: {
   llm: LlmClient;
 }): Promise<RunOutcome> {
   const useMemory = input.request.useMemory ?? true;
+  const limit = readRunLimit();
+  const offset = readRunOffset();
+  console.log(`RUN scope=${input.request.scope.batch} limit=${limit} offset=${offset} useMemory=${useMemory}`);
   const modelCounts = new Map<string, number>();
   const llm = countModels(input.llm, modelCounts);
   const planned = await plan({ ...input, llm });
@@ -127,30 +130,37 @@ async function runContact(input: {
   let retried = 0;
   let memoryHits = 0;
   const cards: EvidenceCard[] = [];
-  const groups = groupByField(investigation.claims);
-  for (const claims of groups.values()) {
-    const field = claims[0]?.field;
-    const listing = claims[0]?.listingId;
-    if (!field || !listing) continue;
-    if (field !== "address" && field !== "phone") continue;
-    const conflict = investigation.conflicts.some((item) => item.listingId === listing && item.field === field);
-    if (!conflict) {
-      cards.push(unchangedCard(input.runId, claims));
-      continue;
+  const listings = fieldGroupsByListing(investigation.claims);
+  const total = listings.length;
+  let done = 0;
+  for (const fieldGroups of listings) {
+    for (const claims of fieldGroups) {
+      const field = claims[0]?.field;
+      const listing = claims[0]?.listingId;
+      if (!field || !listing) continue;
+      if (field !== "address" && field !== "phone") continue;
+      const conflict = investigation.conflicts.some((item) => item.listingId === listing && item.field === field);
+      if (!conflict) {
+        cards.push(unchangedCard(input.runId, claims));
+        continue;
+      }
+      const resolved = await resolveConflict({
+        ...input,
+        llm,
+        claims,
+        useMemory,
+        onRetry: () => {
+          retried += 1;
+        },
+        onMemory: (count) => {
+          memoryHits += count;
+        },
+      });
+      cards.push(resolved);
     }
-    const resolved = await resolveConflict({
-      ...input,
-      llm,
-      claims,
-      useMemory,
-      onRetry: () => {
-        retried += 1;
-      },
-      onMemory: (count) => {
-        memoryHits += count;
-      },
-    });
-    cards.push(resolved);
+    // Count the listing only after every field group, including status, accepting, and specialty.
+    done += 1;
+    if (done % 10 === 0) console.log(`RUN progress ${done}/${total}`);
   }
 
   await input.world.append({
@@ -334,6 +344,18 @@ function groupByField(claims: Claim[]): Map<string, Claim[]> {
     groups.set(key, list);
   }
   return groups;
+}
+
+export function fieldGroupsByListing(claims: Claim[]): Claim[][][] {
+  const byListing = new Map<string, Claim[][]>();
+  for (const fieldClaims of groupByField(claims).values()) {
+    const listing = fieldClaims[0]?.listingId;
+    if (!listing) continue;
+    const fieldGroups = byListing.get(listing) ?? [];
+    fieldGroups.push(fieldClaims);
+    byListing.set(listing, fieldGroups);
+  }
+  return [...byListing.values()];
 }
 
 export function renderDiff(runId: string, cards: EvidenceCard[], rows: unknown[]): string {

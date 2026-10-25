@@ -11,7 +11,7 @@ import { arbitrate, routeConfidence } from "./arbiter.js";
 import { criticize } from "./critic.js";
 import { investigateContact } from "./investigator.js";
 import { decideRisk } from "./risk.js";
-import { DIFF_HEADER, executeRun, renderDiff } from "./run.js";
+import { DIFF_HEADER, executeRun, fieldGroupsByListing, renderDiff } from "./run.js";
 
 describe("normalize", () => {
   it("matches the eval address and phone rules", () => {
@@ -190,6 +190,38 @@ describe("critic and risk", () => {
     expect(decideRisk({ field: "accepting", conflict: true, verdict: "pass", confidence: 0.99 })).toBe("escalated");
     expect(decideRisk({ field: "status", conflict: true, verdict: "pass", confidence: 0.99 })).toBe("escalated");
     expect(decideRisk({ field: "phone", conflict: true, verdict: "pass", confidence: 0.72 })).toBe("applied");
+  });
+});
+
+describe("listing progress", () => {
+  it("keeps status, accepting, and specialty on the listing", () => {
+    const fields = ["address", "phone", "status", "accepting", "specialty"] as const;
+    const claims: Claim[] = fields.map((field) => ({
+      listingId: "L-1",
+      field,
+      source: "directory",
+      value: "x",
+      receiptIds: ["r"],
+      confidence: 1,
+    }));
+    claims.push({
+      listingId: "L-2",
+      field: "address",
+      source: "directory",
+      value: "y",
+      receiptIds: ["r"],
+      confidence: 1,
+    });
+    const listings = fieldGroupsByListing(claims);
+    expect(listings).toHaveLength(2);
+    expect(listings[0]?.map((group) => group[0]?.field)).toEqual([
+      "address",
+      "phone",
+      "status",
+      "accepting",
+      "specialty",
+    ]);
+    expect(listings[1]?.map((group) => group[0]?.field)).toEqual(["address"]);
   });
 });
 
