@@ -23,6 +23,8 @@ describe("planner chunks", () => {
         model: "super",
         latencyMs: 1,
         replayed: true,
+        meterlessReceiptId: "mtr-1",
+        routedModel: "nvidia/nemotron-super",
       }),
     };
     const world = new GnaWorldModel();
@@ -48,5 +50,13 @@ describe("planner chunks", () => {
     expect(created.filter((event) => String(event.payload.family ?? "").length > 0)).toHaveLength(
       3 * PLANNER_FAMILIES.length,
     );
+    const llmEvent = created.find((event) => event.payload.rationale === "low risk");
+    expect(llmEvent?.payload).toMatchObject({
+      model: "super",
+      latencyMs: 1,
+      replayed: true,
+      meterlessReceiptId: "mtr-1",
+      routedModel: "nvidia/nemotron-super",
+    });
   });
 });

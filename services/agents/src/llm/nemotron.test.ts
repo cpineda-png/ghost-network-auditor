@@ -1,9 +1,9 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { EscalationError, ReplayMissError, createNemotronClient, replayKey } from "./nemotron.js";
+import { EscalationError, ReplayMissError, createNemotronClient, readMaxTokens, replayKey } from "./nemotron.js";
 
 const schema = z.object({ ok: z.boolean() });
 
@@ -21,9 +21,12 @@ function client(fetchImpl: typeof fetch, recordDir: string) {
 describe("chatJson", () => {
   const previousReplay = process.env.LLM_REPLAY;
   const previousRecord = process.env.LLM_RECORD;
+  const previousMaxTokens = process.env.NIGHTSHIFT_MAX_TOKENS;
   afterEach(() => {
     process.env.LLM_REPLAY = previousReplay;
     process.env.LLM_RECORD = previousRecord;
+    if (previousMaxTokens === undefined) delete process.env.NIGHTSHIFT_MAX_TOKENS;
+    else process.env.NIGHTSHIFT_MAX_TOKENS = previousMaxTokens;
   });
 
   it("retries invalid JSON once then escalates", async () => {
@@ -52,7 +55,79 @@ describe("chatJson", () => {
     const result = await llm.chatJson("planner", [{ role: "user", content: "hi" }], schema);
     expect(result.data).toEqual({ ok: true });
     expect(result.replayed).toBe(true);
+    expect(result.meterlessReceiptId).toBeNull();
+    expect(result.routedModel).toBeNull();
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("reads message.content, ignores reasoning, and records the Meterless route", async () => {
+    process.env.LLM_REPLAY = "false";
+    process.env.LLM_RECORD = "true";
+    delete process.env.NIGHTSHIFT_MAX_TOKENS;
+    const dir = mkdtempSync(join(tmpdir(), "llm-"));
+    const fetchImpl = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: "{\"ok\":true}",
+                reasoning: "think {\"ok\":false}",
+                reasoning_content: "{\"ok\":false}",
+              },
+            },
+          ],
+          meterless: { receipt_id: "mtr-9", winning_route: { model: "nvidia/nemotron-super" } },
+        }),
+        { status: 200 },
+      ),
+    );
+    const llm = client(fetchImpl, dir);
+    const result = await llm.chatJson("planner", [{ role: "user", content: "hi" }], schema);
+    expect(result).toMatchObject({
+      data: { ok: true },
+      model: "super",
+      replayed: false,
+      meterlessReceiptId: "mtr-9",
+      routedModel: "nvidia/nemotron-super",
+    });
+    const request = JSON.parse(String((fetchImpl.mock.calls[0]?.[1] as RequestInit).body));
+    expect(request.max_tokens).toBe(1500);
+    const key = replayKey("planner", "super", [{ role: "user", content: "hi" }]);
+    const recorded = JSON.parse(readFileSync(join(dir, `${key}.json`), "utf8")) as {
+      model: string;
+      latencyMs: number;
+      replayed: boolean;
+      meterlessReceiptId: string;
+      routedModel: string;
+      response: { content: string };
+    };
+    expect(recorded).toMatchObject({
+      model: "super",
+      replayed: false,
+      meterlessReceiptId: "mtr-9",
+      routedModel: "nvidia/nemotron-super",
+      response: { content: "{\"ok\":true}" },
+    });
+    expect(recorded.latencyMs).toEqual(expect.any(Number));
+    expect(JSON.stringify(recorded)).not.toContain("think");
+
+    process.env.LLM_REPLAY = "true";
+    const replayed = await llm.chatJson("planner", [{ role: "user", content: "hi" }], schema);
+    expect(replayed).toMatchObject({
+      data: { ok: true },
+      model: "super",
+      replayed: true,
+      meterlessReceiptId: "mtr-9",
+      routedModel: "nvidia/nemotron-super",
+    });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps max_tokens at least 1500 and honors a larger env override", () => {
+    expect(readMaxTokens("20")).toBe(1500);
+    expect(readMaxTokens("4000")).toBe(4000);
+    expect(readMaxTokens(undefined)).toBeGreaterThanOrEqual(1500);
   });
 
   it("uses the same replay key when runId differs", () => {
