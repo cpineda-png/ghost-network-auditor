@@ -62,6 +62,10 @@ export function MemoryResults({ trust, cold, warm, runId }: Props) {
 function useDiffHref(runId: string | null): string | null {
   const [href, setHref] = useState<string | null>(null);
   useEffect(() => {
+    if (!runId && !usingFixtures()) {
+      setHref(null);
+      return;
+    }
     const id = runId ?? "run-cold";
     let objectUrl: string | undefined;
     let cancelled = false;

@@ -3,6 +3,7 @@ import {
   COLD_RUN_ID,
   WARM_RUN_ID,
   createRun,
+  errorText,
   getCards,
   getHealth,
   getReceipt,
@@ -10,6 +11,7 @@ import {
   getTrust,
   postRuling,
   streamEvents,
+  usingFixtures,
 } from "./api";
 import { EvidenceCards } from "./components/EvidenceCards";
 import { LiveRun } from "./components/LiveRun";
@@ -37,23 +39,47 @@ export default function App() {
   const stopRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     getHealth()
-      .then((body) => setBadge(body.llmReplay ? "REPLAY" : "LIVE"))
-      .catch(() => setBadge("UNKNOWN"));
+      .then((body) => {
+        if (!cancelled) setBadge(body.llmReplay ? "REPLAY" : "LIVE");
+      })
+      .catch((reason: unknown) => {
+        if (cancelled) return;
+        setBadge("UNKNOWN");
+        setError(errorText(reason));
+      });
+    getTrust()
+      .then((rows) => {
+        if (!cancelled) setTrust(rows);
+      })
+      .catch((reason: unknown) => {
+        if (cancelled) return;
+        setTrust([]);
+        setError(errorText(reason));
+      });
+    if (usingFixtures()) {
+      getReport(COLD_RUN_ID)
+        .then((report) => {
+          if (!cancelled) setColdReport(report);
+        })
+        .catch(() => undefined);
+      getReport(WARM_RUN_ID)
+        .then((report) => {
+          if (!cancelled) setWarmReport(report);
+        })
+        .catch(() => undefined);
+    }
+    return () => {
+      cancelled = true;
+      stopRef.current?.();
+    };
   }, []);
 
-  useEffect(() => {
-    getTrust()
-      .then(setTrust)
-      .catch(() => setTrust([]));
-    getReport(COLD_RUN_ID)
-      .then(setColdReport)
-      .catch(() => undefined);
-    getReport(WARM_RUN_ID)
-      .then(setWarmReport)
-      .catch(() => undefined);
-    return () => stopRef.current?.();
-  }, []);
+  function remember(report: RunReport) {
+    if (report.useMemory) setWarmReport(report);
+    else setColdReport(report);
+  }
 
   function start(request: RunRequest) {
     stopRef.current?.();
@@ -64,30 +90,34 @@ export default function App() {
     setReport(null);
     setError(null);
     void createRun(request)
-      .then(async ({ runId: nextId }) => {
+      .then(({ runId: nextId }) => {
         setRunId(nextId);
-        const [nextCards, nextReport, nextTrust] = await Promise.all([
-          getCards(nextId),
-          getReport(nextId),
-          getTrust(),
-        ]);
-        setCards(nextCards);
-        setReport(nextReport);
-        setTrust(nextTrust);
-        if (nextReport.useMemory) setWarmReport(nextReport);
-        else setColdReport(nextReport);
         stopRef.current = streamEvents(
           nextId,
           (event) => setEvents((current) => [...current, event]),
-          () => {
+          (result) => {
             setRunning(false);
-            setSettled(true);
+            if (!result.ok) {
+              setError("Agents service is unreachable");
+              return;
+            }
+            void Promise.all([getCards(nextId), getReport(nextId), getTrust()])
+              .then(([nextCards, nextReport, nextTrust]) => {
+                setCards(nextCards);
+                setReport(nextReport);
+                setTrust(nextTrust);
+                setSettled(true);
+                remember(nextReport);
+              })
+              .catch((reason: unknown) => {
+                setError(errorText(reason));
+              });
           },
         );
       })
       .catch((reason: unknown) => {
         setRunning(false);
-        setError(reason instanceof Error ? reason.message : "Run failed");
+        setError(errorText(reason));
       });
   }
 
@@ -123,7 +153,7 @@ export default function App() {
               void getReceipt(receiptId)
                 .then(setReceipt)
                 .catch((reason: unknown) => {
-                  setError(reason instanceof Error ? reason.message : "Receipt failed");
+                  setError(errorText(reason));
                 });
             }}
           />
@@ -140,7 +170,7 @@ export default function App() {
         </section>
         <section id="memory" className="panel">
           <h2>Memory and results</h2>
-          <MemoryResults trust={trust} cold={coldReport} warm={warmReport} runId={runId} />
+          <MemoryResults trust={trust} cold={coldReport} warm={warmReport} runId={settled ? runId : null} />
         </section>
       </div>
       <ReceiptPanel receipt={receipt} onClose={() => setReceipt(null)} />
