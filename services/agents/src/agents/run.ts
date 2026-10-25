@@ -15,19 +15,47 @@ export const DIFF_HEADER =
 
 export type RunOutcome = {
   cards: EvidenceCard[];
-  report: RunReport;
+  report: RunReport & { status?: "failed"; error?: string };
   diff: string;
 };
+
+export function failedOutcome(runId: string, useMemory: boolean, error: string): RunOutcome {
+  return {
+    cards: [],
+    report: {
+      runId,
+      useMemory,
+      listings: 0,
+      applied: 0,
+      escalated: 0,
+      retried: 0,
+      ghosts: 0,
+      memoryHits: 0,
+      models: [],
+      status: "failed",
+      error,
+    },
+    diff: `${DIFF_HEADER}\n`,
+  };
+}
 
 export class RunBook {
   private readonly outcomes = new Map<string, RunOutcome>();
   private readonly pending = new Map<string, Promise<RunOutcome>>();
 
   track(runId: string, task: Promise<RunOutcome>): void {
-    const settled = task.then((outcome) => {
-      this.outcomes.set(runId, outcome);
-      return outcome;
-    });
+    const settled = task
+      .then((outcome) => {
+        this.outcomes.set(runId, outcome);
+        return outcome;
+      })
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : "run failed";
+        console.log(`run failed: ${message}`);
+        const outcome = failedOutcome(runId, true, message);
+        this.outcomes.set(runId, outcome);
+        return outcome;
+      });
     this.pending.set(runId, settled);
   }
 
@@ -43,6 +71,39 @@ export class RunBook {
 }
 
 export async function executeRun(input: {
+  request: RunRequest;
+  runId: string;
+  gateway: Gateway;
+  world: GnaWorldModel;
+  hmem: MeterlessHMem;
+  llm: LlmClient;
+}): Promise<RunOutcome> {
+  try {
+    return await runContact(input);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "run failed";
+    console.log(`run failed: ${message}`);
+    await finishFailed(input.world, input.runId, message);
+    return failedOutcome(input.runId, input.request.useMemory ?? true, message);
+  }
+}
+
+async function finishFailed(world: GnaWorldModel, runId: string, message: string): Promise<void> {
+  try {
+    await world.append({
+      runId,
+      ts: new Date().toISOString(),
+      actor: "planner",
+      type: "run_finished",
+      entityId: `run:${runId}`,
+      payload: { error: message },
+    });
+  } catch (error) {
+    console.log(`run_finished failed: ${error instanceof Error ? error.message : "append failed"}`);
+  }
+}
+
+async function runContact(input: {
   request: RunRequest;
   runId: string;
   gateway: Gateway;

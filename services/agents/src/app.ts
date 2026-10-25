@@ -2,10 +2,10 @@ import { randomUUID } from "node:crypto";
 import express from "express";
 import type { GatewayHealth, RunRequest } from "contracts";
 import { gatewayHealthSchema, rulingSchema, runRequestSchema } from "contracts";
-import { executeRun, RunBook } from "./agents/run.js";
+import { executeRun, failedOutcome, RunBook } from "./agents/run.js";
 import { createGateway } from "./gateway/client.js";
 import type { Gateway } from "./gateway/types.js";
-import { createNemotronClient, type LlmClient } from "./llm/nemotron.js";
+import { createNemotronClient, readNemotronConfig, type LlmClient } from "./llm/nemotron.js";
 import { MeterlessHMem } from "./memory/hmem.js";
 import { GnaWorldModel } from "./world/worldModel.js";
 
@@ -32,10 +32,15 @@ export function createApp(deps: AppDeps = {}) {
   const runs = deps.runs ?? new RunBook();
 
   app.get("/health", async (_req, res) => {
+    const [gatewayHealth, nightshift] = await Promise.all([
+      readGatewayHealth(fetchImpl, gatewayUrl),
+      readNightshift(fetchImpl, readNemotronConfig().baseURL),
+    ]);
     res.json({
       ok: true,
-      gateway: await readGatewayHealth(fetchImpl, gatewayUrl),
+      gateway: gatewayHealth,
       llmReplay: process.env.LLM_REPLAY === "true",
+      nightshift,
     });
   });
 
@@ -49,15 +54,21 @@ export function createApp(deps: AppDeps = {}) {
     const request: RunRequest = { ...parsed.data, useMemory: parsed.data.useMemory ?? true };
     res.json({ runId });
     const task = executeRun({ request, runId, gateway, world, hmem, llm }).catch(async (error) => {
-      await world.append({
-        runId,
-        ts: new Date().toISOString(),
-        actor: "planner",
-        type: "escalated",
-        entityId: `run:${runId}`,
-        payload: { error: error instanceof Error ? error.message : "run failed" },
-      });
-      throw error;
+      const message = error instanceof Error ? error.message : "run failed";
+      console.log(`run failed: ${message}`);
+      try {
+        await world.append({
+          runId,
+          ts: new Date().toISOString(),
+          actor: "planner",
+          type: "run_finished",
+          entityId: `run:${runId}`,
+          payload: { error: message },
+        });
+      } catch (appendError) {
+        console.log(`run_finished failed: ${appendError instanceof Error ? appendError.message : "append failed"}`);
+      }
+      return failedOutcome(runId, request.useMemory, message);
     });
     runs.track(runId, task);
   });
@@ -137,6 +148,19 @@ export function createApp(deps: AppDeps = {}) {
   });
 
   return app;
+}
+
+async function readNightshift(fetchImpl: typeof fetch, baseURL: string): Promise<"up" | "down"> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 3000);
+  try {
+    const response = await fetchImpl(`${baseURL}/models`, { signal: controller.signal });
+    return response.ok ? "up" : "down";
+  } catch {
+    return "down";
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function readGatewayHealth(
