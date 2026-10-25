@@ -112,6 +112,7 @@ class NightshiftLlmClient implements LlmClient {
   constructor(private readonly config: NemotronConfig) {}
 
   async chatJson<T>(role: ChatRole, messages: ChatMessage[], schema: ZodType<T>): Promise<ChatJsonResult<T>> {
+    // Ultra (planner model) serves planner, arbiter, and critic. Lightning is the worker and the fallback when Ultra fails.
     const primary = role === "worker" ? this.config.workerModel : this.config.plannerModel;
     const fallback = this.config.workerModel;
     try {
