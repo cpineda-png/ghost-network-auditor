@@ -92,6 +92,8 @@ class RunScore:
     sunrise_escalated: int
     sunrise_applied_with_memory: int
     sunrise_applied_without_memory: int
+    touched_only: bool = False
+    touched_listings: int = 0
 
 
 def load_csv(path: Path, columns: tuple[str, ...]) -> list[dict[str, str]]:
@@ -193,6 +195,8 @@ def score_run(
     diff_rows: list[dict[str, str]],
     labels: list[dict[str, str]],
     directory: dict[str, dict[str, str]],
+    *,
+    touched_only: bool = False,
 ) -> RunScore:
     if not diff_rows:
         raise ValueError("diff has no rows")
@@ -239,10 +243,14 @@ def score_run(
         if directory[label["listing_id"]]["batch"] == batch and label["is_decoy"] == "true"
     ]
     diff_index = {(row["listing_id"], row["field"]): row for row in diff_rows}
+    touched_ids = {row["listing_id"] for row in diff_rows}
+    recall_planted = planted
+    if touched_only:
+        recall_planted = [label for label in planted if label["listing_id"] in touched_ids]
 
     detected = 0
     by_type = {name: [0, 0] for name in ERROR_TYPES}
-    for label in planted:
+    for label in recall_planted:
         by_type[label["error_type"]][1] += 1
         row = diff_index.get((label["listing_id"], label["field"]))
         if row is not None and row["status"] in {"applied", "escalated"}:
@@ -326,9 +334,9 @@ def score_run(
         run_id=diff_rows[0]["run_id"],
         batch=batch,
         touched=len(diff_rows),
-        planted=len(planted),
+        planted=len(recall_planted),
         detected=detected,
-        recall=_rate(detected, len(planted), 1.0),
+        recall=_rate(detected, len(recall_planted), 1.0),
         applied=len(applied_rows),
         matches=matches,
         precision=_rate(matches, len(applied_rows), 1.0),
@@ -344,6 +352,8 @@ def score_run(
         sunrise_escalated=sunrise_escalated,
         sunrise_applied_with_memory=sunrise_with_memory,
         sunrise_applied_without_memory=sunrise_without_memory,
+        touched_only=touched_only,
+        touched_listings=len(touched_ids),
     )
 
 
@@ -406,8 +416,11 @@ def render_run(score: RunScore) -> str:
         score.sunrise_escalated + score.sunrise_applied_with_memory + score.sunrise_applied_without_memory
     )
     sunrise_ids = ", ".join(score.sunrise_ids) if score.sunrise_ids else "none"
+    heading = f"## {score.run_id}"
+    if score.touched_only:
+        heading += f"\n\ntouched-only ({score.touched_listings} listings)"
     parts = [
-        f"## {score.run_id}",
+        heading,
         "",
         format_summary(score),
         "",
@@ -508,10 +521,12 @@ def score_files(
     diff_paths: list[Path],
     labels_path: Path,
     seed_path: Path,
+    *,
+    touched_only: bool = False,
 ) -> list[RunScore]:
     labels = load_labels(labels_path)
     directory = load_directory(seed_path)
-    return [score_run(load_diff(path), labels, directory) for path in diff_paths]
+    return [score_run(load_diff(path), labels, directory, touched_only=touched_only) for path in diff_paths]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -520,10 +535,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--labels", type=Path, default=ROOT / "data" / "sample" / "labels.csv")
     parser.add_argument("--seed", type=Path, default=ROOT / "data" / "sample" / "seed.sql")
     parser.add_argument("--out", type=Path, help="Markdown report. Defaults to eval/reports/<diff>.md")
+    parser.add_argument(
+        "--touched-only",
+        action="store_true",
+        help="Count recall only for planted errors on listings present in the diff.",
+    )
     args = parser.parse_args(argv)
     if not 1 <= len(args.diff) <= 2:
         parser.error("pass one diff, or two for cold then warm")
-    scores = score_files(args.diff, args.labels, args.seed)
+    scores = score_files(args.diff, args.labels, args.seed, touched_only=args.touched_only)
     out = args.out if args.out is not None else default_out(args.diff)
     report = render_report(scores)
     if not report.endswith("\n"):
