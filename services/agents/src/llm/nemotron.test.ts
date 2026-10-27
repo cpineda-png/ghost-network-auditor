@@ -3,7 +3,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { EscalationError, ReplayMissError, createNemotronClient, readMaxTokens, replayKey } from "./nemotron.js";
+import {
+  EscalationError,
+  ReplayMissError,
+  alignReceiptIds,
+  applyReceiptIds,
+  createNemotronClient,
+  readMaxTokens,
+  replayKey,
+} from "./nemotron.js";
 
 const schema = z.object({ ok: z.boolean() });
 
@@ -208,6 +216,44 @@ describe("chatJson", () => {
     const otherValue = replayKey("planner", model, arbiter("rcpt_aaaaaaaaaaaaaaaa", "run-b", "in"));
     expect(sameReceipt).toBe(otherReceipt);
     expect(otherValue).not.toBe(sameReceipt);
+  });
+
+  it("rewrites a recorded receipt id onto the current run", async () => {
+    process.env.LLM_REPLAY = "true";
+    const oldId = "rcpt_1111111111111111";
+    const newId = "rcpt_2222222222222222";
+    const recordedMessages = [
+      { role: "user" as const, content: JSON.stringify({ claims: [{ receiptIds: [oldId] }] }) },
+    ];
+    const currentMessages = [
+      { role: "user" as const, content: JSON.stringify({ claims: [{ receiptIds: [newId] }] }) },
+    ];
+    const dir = mkdtempSync(join(tmpdir(), "llm-"));
+    const key = replayKey("planner", "super", currentMessages);
+    writeFileSync(
+      join(dir, `${key}.json`),
+      JSON.stringify({
+        request: { role: "planner", model: "super", messages: recordedMessages },
+        response: { content: JSON.stringify({ receiptIds: [oldId] }) },
+        model: "super",
+        latencyMs: 1,
+      }),
+    );
+    const llm = client(vi.fn(), dir);
+    const shape = z.object({ receiptIds: z.array(z.string()) });
+    const replayed = await llm.chatJson("planner", currentMessages, shape);
+    expect(replayed.data.receiptIds).toEqual([newId]);
+    expect(replayed.replayed).toBe(true);
+  });
+
+  it("leaves recorded receipt ids in place when the messages do not align", () => {
+    const oldId = "rcpt_1111111111111111";
+    const map = alignReceiptIds(
+      [{ content: `${oldId} rcpt_3333333333333333` }],
+      [{ content: "rcpt_2222222222222222" }],
+    );
+    expect(map.size).toBe(0);
+    expect(applyReceiptIds(oldId, map)).toBe(oldId);
   });
 
   it("throws ReplayMissError naming the key", async () => {

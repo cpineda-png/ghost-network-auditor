@@ -177,6 +177,31 @@ class ScoreTest(unittest.TestCase):
         self.assertIn("## Cold vs warm", report)
         self.assertIn("mem-sunrise-move", "".join(row["memory_ids"] for row in score.load_diff(FIXTURES / "warm_B.csv")))
 
+    def test_contact_only_escalations_skip_status_and_accepting(self) -> None:
+        directory = {"L-1": {"batch": "A"}, "L-2": {"batch": "A"}}
+        diff = [
+            diff_row("L-1", "address", new_value="1 Main St", status="escalated"),
+            diff_row("L-1", "phone", new_value="7185550100", status="escalated"),
+            diff_row("L-1", "specialty", new_value="cardiology", status="escalated"),
+            diff_row("L-1", "status", new_value="terminated", status="escalated"),
+            diff_row("L-1", "accepting", new_value="false", status="escalated"),
+            diff_row("L-2", "address", new_value="2 Main St", status="applied", receipt_ids="rcpt-2"),
+        ]
+        result = score.score_run(diff, [], directory)
+        self.assertEqual(result.escalated, 5)
+        self.assertEqual(result.contact_escalated, 3)
+        report = score.render_report([result, result])
+        self.assertIn("| contact-only escalations | 3 |", report)
+        section = report.split("## Cold vs warm", 1)[1]
+        header = next(line for line in section.splitlines() if line.startswith("| run |"))
+        columns = [cell.strip() for cell in header.strip("|").split("|")]
+        index = columns.index("contact-only escalations")
+        rows = [line for line in section.splitlines() if line.startswith("| unit |")]
+        self.assertEqual(len(rows), 2)
+        for line in rows:
+            values = [cell.strip() for cell in line.strip("|").split("|")]
+            self.assertEqual(values[index], "3")
+
     def test_touched_only_recall_ignores_listings_absent_from_the_diff(self) -> None:
         labels = [
             {

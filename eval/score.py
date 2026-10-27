@@ -55,6 +55,7 @@ DIRECTORY_COLUMNS = (
     "county",
 )
 FIELDS = ("address", "phone", "status", "specialty", "accepting")
+CONTACT_FIELDS = frozenset({"address", "phone", "specialty"})
 STATUSES = ("applied", "escalated", "unchanged")
 ERROR_TYPES = ("address", "phone", "accepting", "ghost", "specialty")
 PLANTED_FIELD = {
@@ -82,6 +83,7 @@ class RunScore:
     precision: float
     wrong_applies: list[dict[str, str]]
     escalated: int
+    contact_escalated: int
     escalation_rate: float
     decoy_applied: int
     decoy_escalated: int
@@ -259,6 +261,11 @@ def score_run(
 
     applied_rows = [row for row in diff_rows if row["status"] == "applied"]
     escalated_count = sum(1 for row in diff_rows if row["status"] == "escalated")
+    contact_escalated = sum(
+        1
+        for row in diff_rows
+        if row["status"] == "escalated" and row["field"] in CONTACT_FIELDS
+    )
     matches = 0
     wrong_applies: list[dict[str, str]] = []
     for row in applied_rows:
@@ -342,6 +349,7 @@ def score_run(
         precision=_rate(matches, len(applied_rows), 1.0),
         wrong_applies=wrong_applies,
         escalated=escalated_count,
+        contact_escalated=contact_escalated,
         escalation_rate=_rate(escalated_count, len(diff_rows), 0.0),
         decoy_applied=decoy_applied,
         decoy_escalated=decoy_escalated,
@@ -400,6 +408,7 @@ def render_run(score: RunScore) -> str:
             ("escalated", score.escalated),
             ("touched", score.touched),
             ("escalation rate", f"{score.escalation_rate:.2f}"),
+            ("contact-only escalations", score.contact_escalated),
             ("decoy applied", score.decoy_applied),
             ("decoy escalated", score.decoy_escalated),
             ("ghost violations", len(score.violations)),
@@ -484,6 +493,7 @@ def render_report(scores: list[RunScore]) -> str:
             "run",
             "escalation count",
             "escalation rate",
+            "contact-only escalations",
             "sunrise auto-applied with memory",
             "recall",
             "precision",
@@ -493,6 +503,7 @@ def render_report(scores: list[RunScore]) -> str:
                 score.run_id,
                 score.escalated,
                 f"{score.escalation_rate:.2f}",
+                score.contact_escalated,
                 score.sunrise_applied_with_memory,
                 f"{score.recall:.2f}",
                 f"{score.precision:.2f}",
