@@ -92,7 +92,8 @@ export function stripPerRun(value: unknown): unknown {
       .replace(/\d{4}-\d{2}-\d{2}T[\d:.]+Z/g, "<ts>")
       .replace(/"runId"\s*:\s*"[^"]*"/g, '"runId":""')
       .replace(/"receiptId"\s*:\s*"[^"]*"/g, '"receiptId":""')
-      .replace(/receipt-[A-Za-z0-9:_-]+/g, "<receipt>");
+      .replace(/receipt-[A-Za-z0-9:_-]+/g, "<receipt>")
+      .replace(/rcpt_[0-9a-f]{16}/g, "<receipt>");
   }
   if (Array.isArray(value)) return value.map(stripPerRun);
   if (value && typeof value === "object") {

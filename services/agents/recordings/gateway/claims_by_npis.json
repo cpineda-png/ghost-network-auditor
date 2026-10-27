@@ -1,0 +1,42 @@
+{
+  "receipt": {
+    "receiptId": "rcpt_0578e1538fd76b8b",
+    "runId": "4db48861-1c28-44ce-ad15-2d3a0a3ba3b2",
+    "templateId": "claims_by_npis",
+    "sql": "SELECT npi, service_address_line1, service_zip, month, claim_count, new_patient_count FROM GNA_FILES.claims WHERE npi IN ('8000000900', '8000000918', '8000000926', '8000000934', '8000000942', '8000000959', '8000000967', '8000000975', '8000000983', '8000000991') AND month >= '2025-09' AND month <= '2026-10'",
+    "params": {
+      "npis": [
+        "8000000900",
+        "8000000918",
+        "8000000926",
+        "8000000934",
+        "8000000942",
+        "8000000959",
+        "8000000967",
+        "8000000975",
+        "8000000983",
+        "8000000991"
+      ],
+      "fromMonth": "2025-09",
+      "toMonth": "2026-10"
+    },
+    "sources": [
+      "GNA_FILES.claims"
+    ],
+    "rowCount": 0,
+    "rowsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "rowsPreview": [],
+    "executedAt": "2026-10-27T01:35:21.358523724Z",
+    "mode": "live",
+    "durationMs": 165
+  },
+  "columns": [
+    "npi",
+    "service_address_line1",
+    "service_zip",
+    "month",
+    "claim_count",
+    "new_patient_count"
+  ],
+  "rows": []
+}
