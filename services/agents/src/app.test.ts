@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AddressInfo } from "node:net";
 import { createServer } from "node:http";
-import { claimSchema } from "contracts";
+import { claimSchema, type EvidenceCard } from "contracts";
+import { RunBook } from "./agents/run.js";
 import { createApp } from "./app.js";
 import { MockGateway } from "./gateway/mock.js";
 import type { LlmClient } from "./llm/nemotron.js";
+import { MeterlessHMem } from "./memory/hmem.js";
 import { GnaWorldModel } from "./world/worldModel.js";
 
 function listen(app: ReturnType<typeof createApp>): Promise<{ url: string; close: () => Promise<void> }> {
@@ -244,6 +246,84 @@ async function waitForJson(base: string, path: string): Promise<{ status?: strin
   }
   throw new Error(`timed out waiting for ${path}`);
 }
+
+describe("POST /rulings", () => {
+  it("stores group and rejected sources from the finished run", async () => {
+    const hmem = new MeterlessHMem();
+    const runs = new RunBook();
+    const card: EvidenceCard = {
+      runId: "run-ruling",
+      listingId: "L-00001",
+      field: "address",
+      sources: [
+        { source: "directory", value: "900 Old Pier St", receiptIds: ["r-dir"] },
+        { source: "roster", value: "900 Old Pier St", receiptIds: ["r-ros"] },
+        { source: "claims", value: "100 Harbor Sample Ave", receiptIds: ["r-clm"] },
+      ],
+      winner: null,
+      confidence: null,
+      rationale: "Escalated.",
+      critique: null,
+      status: "escalated",
+      memoryIds: [],
+    };
+    runs.track(
+      "run-ruling",
+      Promise.resolve({
+        cards: [card],
+        report: {
+          runId: "run-ruling",
+          useMemory: true,
+          listings: 1,
+          applied: 0,
+          escalated: 1,
+          retried: 0,
+          ghosts: 0,
+          memoryHits: 0,
+          models: [],
+        },
+        diff: "",
+        listings: { "L-00001": { npi: "8000000009", groupName: "Sunrise Behavioral Group" } },
+      }),
+    );
+    await runs.whenDone("run-ruling");
+    const app = createApp({ hmem, runs, gateway: new MockGateway(), fetchImpl: vi.fn() });
+    const server = await listen(app);
+    try {
+      const response = await fetch(`${server.url}/rulings`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          runId: "run-ruling",
+          listingId: "L-00001",
+          field: "address",
+          value: "100 Harbor Sample Ave",
+          source: "claims",
+          analyst: "avery",
+        }),
+      });
+      expect(response.status).toBe(200);
+      const stored = (await response.json()) as { memoryId: string };
+      const memory = hmem.engine.store.get(stored.memoryId);
+      expect(memory?.content).toContain("Sunrise Behavioral Group");
+      expect(memory?.content).toContain("roster:900 Old Pier St");
+      const hits = await hmem.recall({
+        listingId: "L-00471",
+        field: "address",
+        groupName: "Sunrise Behavioral Group",
+        values: ["900 Old Pier St", "100 Harbor Sample Ave"],
+      });
+      expect(hits.map((hit) => hit.memoryId)).toContain(stored.memoryId);
+      const trust = await (await fetch(`${server.url}/memory/trust`)).json();
+      expect(trust).toEqual(expect.arrayContaining([
+        expect.objectContaining({ source: "claims", field: "address", helpful: 1 }),
+        expect.objectContaining({ source: "roster", field: "address", wrong: 1 }),
+      ]));
+    } finally {
+      await server.close();
+    }
+  });
+});
 
 describe("POST /receipts/:id/replay", () => {
   it("returns the gateway replay match", async () => {

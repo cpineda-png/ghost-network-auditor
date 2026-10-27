@@ -192,9 +192,95 @@ describe("critic and risk", () => {
   it("never applies accepting or status", () => {
     expect(decideRisk({ field: "accepting", conflict: true, verdict: "pass", confidence: 0.99 })).toBe("escalated");
     expect(decideRisk({ field: "status", conflict: true, verdict: "pass", confidence: 0.99 })).toBe("escalated");
+    expect(decideRisk({
+      field: "status",
+      conflict: true,
+      verdict: "pass",
+      confidence: 0.99,
+      memoryIds: ["mem-1"],
+      proposedValue: "terminated",
+      directoryValue: "in",
+    })).toBe("escalated");
     expect(decideRisk({ field: "phone", conflict: true, verdict: "pass", confidence: 0.72 })).toBe("applied");
     expect(decideRisk({ field: "specialty", conflict: true, verdict: "pass", confidence: 0.7 })).toBe("applied");
     expect(decideRisk({ field: "specialty", conflict: true, verdict: "pass", confidence: 0.69 })).toBe("escalated");
+  });
+
+  it("escalates a proposal that matches the directory value", () => {
+    expect(decideRisk({
+      field: "address",
+      conflict: true,
+      verdict: "pass",
+      confidence: 0.9,
+      proposedValue: "900 Old Pier St",
+      directoryValue: "900 Old Pier St 11201",
+      memoryIds: ["mem-1"],
+    })).toBe("escalated");
+    expect(decideRisk({
+      field: "address",
+      conflict: false,
+      verdict: "pass",
+      confidence: 0.9,
+      proposedValue: "10 Main St",
+      directoryValue: "10 Main St",
+    })).toBe("unchanged");
+  });
+
+  it("applies a memory-backed address that differs from the directory", () => {
+    expect(decideRisk({
+      field: "address",
+      conflict: true,
+      verdict: "pass",
+      confidence: 0.7,
+      proposedValue: "100 Harbor Sample Ave",
+      directoryValue: "900 Old Pier St",
+      memoryIds: ["mem-sunrise"],
+    })).toBe("applied");
+  });
+
+  it("counts cards whose proposal cited memory ids", async () => {
+    const llm: LlmClient = {
+      async chatJson(role, messages) {
+        if (role === "worker") {
+          return { data: { summary: "Address sources disagree." }, model: "lightning", latencyMs: 1, replayed: true };
+        }
+        if (role === "critic") {
+          return {
+            data: { verdict: "pass", reasons: ["rows support the value"], failedReceiptIds: [] },
+            model: "super",
+            latencyMs: 1,
+            replayed: true,
+          };
+        }
+        if (messages[0]?.content.includes("Risk-rank")) {
+          return {
+            data: { rankings: [{ chunkIndex: 0, risk: 0.2, templates: ["roster_by_npis"] }], rationale: "contact" },
+            model: "super",
+            latencyMs: 1,
+            replayed: true,
+          };
+        }
+        const body = JSON.parse(messages[1]?.content ?? "{}") as { claims: Claim[] };
+        const roster = body.claims.find((claim) => claim.source === "roster") ?? body.claims[0]!;
+        return {
+          data: proposal(0.84, ["mem-sunrise"], roster.receiptIds[0], roster),
+          model: "super",
+          latencyMs: 1,
+          replayed: true,
+        };
+      },
+    };
+    const outcome = await executeRun({
+      request: { scope: { batch: "A", limit: 1, offset: 0 }, useMemory: true },
+      runId: "memory-hits",
+      gateway: new MockGateway(),
+      world: new GnaWorldModel(),
+      hmem: new MeterlessHMem(),
+      llm,
+    });
+    const cited = outcome.cards.filter((card) => card.memoryIds.includes("mem-sunrise"));
+    expect(cited.length).toBeGreaterThan(0);
+    expect(outcome.report.memoryHits).toBe(cited.length);
   });
 });
 

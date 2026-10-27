@@ -1,8 +1,8 @@
-import type { Claim, EvidenceCard, Field, RunReport, RunRequest } from "contracts";
+import type { Claim, EvidenceCard, Field, Ruling, RunReport, RunRequest } from "contracts";
 import { THRESHOLDS } from "contracts";
 import type { Gateway } from "../gateway/types.js";
 import type { LlmClient } from "../llm/nemotron.js";
-import type { MeterlessHMem } from "../memory/hmem.js";
+import type { MeterlessHMem, RulingContext } from "../memory/hmem.js";
 import { listingId, type GnaWorldModel } from "../world/worldModel.js";
 import { arbitrate } from "./arbiter.js";
 import { criticize } from "./critic.js";
@@ -16,6 +16,8 @@ import {
 import { chunkRows, plan, resolveRunWindow } from "./planner.js";
 import { decideRisk } from "./risk.js";
 
+export type ListingFact = { npi: string; groupName: string };
+
 export const DIFF_HEADER =
   "run_id,listing_id,field,old_value,new_value,winning_source,status,confidence,receipt_ids,memory_ids";
 
@@ -23,6 +25,7 @@ export type RunOutcome = {
   cards: EvidenceCard[];
   report: RunReport & { status?: "failed"; error?: string };
   diff: string;
+  listings: Record<string, ListingFact>;
 };
 
 export function failedOutcome(runId: string, useMemory: boolean, error: string): RunOutcome {
@@ -42,6 +45,19 @@ export function failedOutcome(runId: string, useMemory: boolean, error: string):
       error,
     },
     diff: `${DIFF_HEADER}\n`,
+    listings: {},
+  };
+}
+
+export function listingContextForRuling(outcome: RunOutcome | undefined, ruling: Ruling): RulingContext | undefined {
+  if (!outcome) return undefined;
+  const fact = outcome.listings[ruling.listingId];
+  const card = outcome.cards.find((item) => item.listingId === ruling.listingId && item.field === ruling.field);
+  if (!fact && !card) return undefined;
+  return {
+    npi: fact?.npi || undefined,
+    groupName: fact?.groupName || undefined,
+    sources: card?.sources.map((source) => ({ source: source.source, value: source.value })),
   };
 }
 
@@ -159,8 +175,8 @@ async function runContact(input: {
   });
 
   let retried = 0;
-  let memoryHits = 0;
   const cards: EvidenceCard[] = [];
+  const facts = listingFacts(planned.directoryRows);
   const listings = fieldGroupsByListing(investigation.claims);
   const total = listings.length;
   let done = 0;
@@ -179,11 +195,9 @@ async function runContact(input: {
         llm,
         claims,
         useMemory,
+        groupName: facts[listing]?.groupName || undefined,
         onRetry: () => {
           retried += 1;
-        },
-        onMemory: (count) => {
-          memoryHits += count;
         },
       });
       cards.push(resolved);
@@ -210,23 +224,23 @@ async function runContact(input: {
     escalated: cards.filter((card) => card.status === "escalated").length,
     retried,
     ghosts: cards.filter((card) => card.status === "escalated" && (card.field === "status" || card.field === "accepting")).length,
-    memoryHits,
+    memoryHits: cards.filter((card) => card.memoryIds.length > 0).length,
     models: [...modelCounts.entries()].map(([model, calls]) => ({ model, calls })),
   };
   const diff = renderDiff(input.runId, cards, planned.directoryRows);
-  return { cards, report, diff };
+  return { cards, report, diff, listings: facts };
 }
 
 async function resolveConflict(input: {
   runId: string;
   claims: Claim[];
   useMemory: boolean;
+  groupName?: string;
   gateway: Gateway;
   world: GnaWorldModel;
   hmem: MeterlessHMem;
   llm: LlmClient;
   onRetry: () => void;
-  onMemory: (count: number) => void;
 }): Promise<EvidenceCard> {
   let retriesUsed = 0;
   let revisions = 0;
@@ -237,11 +251,11 @@ async function resolveConflict(input: {
       claims: input.claims,
       retriesUsed,
       useMemory: input.useMemory,
+      groupName: input.groupName,
       hmem: input.hmem,
       world: input.world,
       llm: input.llm,
     });
-    input.onMemory(arbiter.hits);
     if (arbiter.route === "retry") {
       retriesUsed += 1;
       input.onRetry();
@@ -273,11 +287,15 @@ async function resolveConflict(input: {
       revisions += 1;
       continue;
     }
+    const directoryValue = input.claims.find((claim) => claim.source === "directory")?.value;
     const status = decideRisk({
       field: arbiter.proposal.field,
       conflict: true,
       verdict: critique.critique.verdict === "revise" ? "reject" : critique.critique.verdict,
       confidence: arbiter.proposal.confidence,
+      proposedValue: arbiter.proposal.proposedValue,
+      directoryValue,
+      memoryIds: arbiter.proposal.memoryIds,
     });
     if (status === "applied") {
       await input.world.append({
@@ -445,6 +463,20 @@ function cell(value: unknown): string {
 function diffFieldValue(field: string, value: string): string {
   if (field !== "address") return value;
   return value.replace(/\s+\d{5}(?:-\d{4})?$/, "");
+}
+
+function listingFacts(rows: unknown[]): Record<string, ListingFact> {
+  const facts: Record<string, ListingFact> = {};
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+    const record = row as Record<string, unknown>;
+    if (typeof record.listing_id !== "string" || typeof record.npi !== "string") continue;
+    facts[record.listing_id] = {
+      npi: record.npi,
+      groupName: typeof record.group_name === "string" ? record.group_name : "",
+    };
+  }
+  return facts;
 }
 
 function csvCell(value: string): string {

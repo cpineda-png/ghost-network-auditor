@@ -41,3 +41,14 @@ function accepting(value: string): string {
 function plain(value: string): string {
   return value.toLowerCase().replace(whitespace, " ").trim();
 }
+
+const trailingZip = /\s+\d{5}(?:-\d{4})?$/;
+
+export function sameValue(field: string, left: unknown, right: unknown): boolean {
+  return normalize(field, comparable(field, left)) === normalize(field, comparable(field, right));
+}
+
+function comparable(field: string, value: unknown): unknown {
+  if (field !== "address" || typeof value !== "string") return value;
+  return value.replace(trailingZip, "");
+}

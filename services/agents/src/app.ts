@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import express from "express";
 import type { GatewayHealth, RunRequest } from "contracts";
 import { gatewayHealthSchema, rulingSchema, runRequestSchema } from "contracts";
-import { executeRun, failedOutcome, RunBook } from "./agents/run.js";
+import { executeRun, failedOutcome, listingContextForRuling, RunBook } from "./agents/run.js";
 import { createGateway } from "./gateway/client.js";
 import type { Gateway } from "./gateway/types.js";
 import { createNemotronClient, readNemotronConfig, type LlmClient } from "./llm/nemotron.js";
@@ -87,7 +87,7 @@ export function createApp(deps: AppDeps = {}) {
       res.status(400).json({ error: "invalid Ruling" });
       return;
     }
-    const stored = await hmem.recordRuling(parsed.data);
+    const stored = await hmem.recordRuling(parsed.data, listingContextForRuling(runs.get(parsed.data.runId), parsed.data));
     await world.append({
       runId: parsed.data.runId,
       ts: new Date().toISOString(),
