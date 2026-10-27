@@ -186,6 +186,20 @@ export default function App() {
       });
   }
 
+  function replayCurrent(receiptId: string) {
+    setReplayMatch(null);
+    setReplayError(null);
+    setReplayLoading(true);
+    void replayReceipt(receiptId)
+      .then((replay) => {
+        setReplayMatch(replay.match);
+      })
+      .catch((reason: unknown) => {
+        setReplayError(errorText(reason));
+      })
+      .finally(() => setReplayLoading(false));
+  }
+
   function openReceipt(receiptId: string) {
     setReceipt(null);
     setReceiptError(null);
@@ -197,15 +211,7 @@ export default function App() {
       .then((next) => {
         setReceipt(next);
         setReceiptLoading(false);
-        setReplayLoading(true);
-        return replayReceipt(receiptId)
-          .then((replay) => {
-            setReplayMatch(replay.match);
-          })
-          .catch((reason: unknown) => {
-            setReplayError(errorText(reason));
-          })
-          .finally(() => setReplayLoading(false));
+        replayCurrent(receiptId);
       })
       .catch((reason: unknown) => {
         setReceiptLoading(false);
@@ -358,6 +364,7 @@ export default function App() {
         match={replayMatch}
         matchError={replayError}
         replayLoading={replayLoading}
+        onReplay={() => receipt && replayCurrent(receipt.receiptId)}
         onClose={resetReceipt}
       />
     </main>
