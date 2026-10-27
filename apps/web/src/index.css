@@ -237,6 +237,20 @@ a {
   border-bottom: 1px solid var(--border);
 }
 
+.brand-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.logo {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  color: var(--accent);
+  fill: currentColor;
+}
+
 .tagline {
   max-width: 62ch;
   margin-top: var(--space-2);

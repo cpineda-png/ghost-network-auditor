@@ -245,7 +245,30 @@ export default function App() {
       </a>
       <header className="app-header">
         <div className="brand">
-          <h1>Ghost Network Auditor</h1>
+          <div className="brand-title">
+            <svg className="logo" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false">
+              <path
+                d="M7 8.5H21L14 16.5Z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M14 16.5L20.5 21"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                opacity="0.35"
+              />
+              <circle cx="7" cy="8.5" r="2.5" />
+              <circle cx="21" cy="8.5" r="2.5" />
+              <circle cx="14" cy="16.5" r="2.5" />
+              <circle cx="20.5" cy="21" r="2.3" opacity="0.35" />
+            </svg>
+            <h1>Ghost Network Auditor</h1>
+          </div>
           <p className="tagline">Audit provider listings against claims, rosters, and prior rulings.</p>
           <ul className="legend" aria-label="Status meanings">
             <li>
