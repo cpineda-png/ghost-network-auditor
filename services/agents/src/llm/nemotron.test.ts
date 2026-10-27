@@ -192,6 +192,24 @@ describe("chatJson", () => {
     expect(a).toBe(b);
   });
 
+  it("uses the same replay key when only gateway receipt ids differ", () => {
+    const arbiter = (receipt: string, runId: string, value = "terminated") => [
+      {
+        role: "user" as const,
+        content: JSON.stringify({
+          runId,
+          claims: [{ listingId: "L-00100", field: "status", source: "roster", value, receiptIds: [receipt] }],
+        }),
+      },
+    ];
+    const model = "nvidia/nemotron-3-ultra-550b-a55b";
+    const sameReceipt = replayKey("planner", model, arbiter("rcpt_5920298dffa56057", "run-a"));
+    const otherReceipt = replayKey("planner", model, arbiter("rcpt_aaaaaaaaaaaaaaaa", "run-b"));
+    const otherValue = replayKey("planner", model, arbiter("rcpt_aaaaaaaaaaaaaaaa", "run-b", "in"));
+    expect(sameReceipt).toBe(otherReceipt);
+    expect(otherValue).not.toBe(sameReceipt);
+  });
+
   it("throws ReplayMissError naming the key", async () => {
     process.env.LLM_REPLAY = "true";
     const dir = mkdtempSync(join(tmpdir(), "llm-"));
