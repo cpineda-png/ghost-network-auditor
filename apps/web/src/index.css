@@ -1361,76 +1361,101 @@ pre,
   margin-top: var(--space-3);
 }
 
+.receipt-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  background: rgba(15, 23, 36, 0.55);
+  backdrop-filter: blur(4px);
+}
+
 .receipt-rows {
   max-width: 100%;
-  overflow-x: scroll;
-  scrollbar-color: var(--border-strong) var(--surface-muted);
-  scrollbar-width: thin;
-}
-
-.receipt-rows::-webkit-scrollbar {
-  height: 10px;
-}
-
-.receipt-rows::-webkit-scrollbar-track {
-  background: var(--surface-muted);
-}
-
-.receipt-rows::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: var(--border-strong);
+  overflow: hidden;
 }
 
 .receipt-rows table {
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
+  table-layout: fixed;
   font-size: var(--text-xs);
 }
 
 .receipt-rows th,
 .receipt-rows td {
   padding: 4px 8px;
+}
+
+.receipt-rows thead th {
   white-space: nowrap;
 }
 
-.receipt-rows th:first-child,
-.receipt-rows td:first-child {
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  background: var(--surface);
-  box-shadow: 1px 0 0 var(--border);
+.cell-ellipsis {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.receipt-rows thead th:first-child {
-  z-index: 2;
-  background: var(--surface-muted);
+.receipt-row {
+  cursor: pointer;
 }
 
-.receipt-panel {
+.receipt-row:hover {
+  background: var(--table-hover);
+}
+
+.receipt-detail {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  padding: var(--space-2) 0;
+}
+
+.receipt-detail div {
+  min-width: 0;
+}
+
+.receipt-detail dt {
+  color: var(--ink-muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.receipt-detail dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+dialog.receipt-panel[open] {
   position: fixed;
-  top: var(--space-5);
-  right: var(--space-5);
-  bottom: auto;
-  left: auto;
-  z-index: 3;
-  width: min(46rem, calc(100vw - 48px));
-  max-height: calc(100vh - 48px);
+  top: 50%;
+  left: 50%;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  width: min(72rem, 92vw);
+  max-height: 86vh;
   margin: 0;
   padding: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
   background: var(--surface);
   color: var(--ink);
   box-shadow: var(--shadow-overlay);
+  transform: translate(-50%, -50%);
 }
 
 .receipt-head {
   position: sticky;
   top: 0;
   z-index: 1;
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
   padding: var(--space-4) var(--space-4) var(--space-3);
   border-bottom: 1px solid var(--border);
   background: var(--surface);
@@ -1442,13 +1467,17 @@ pre,
 }
 
 .receipt-body {
+  flex: 1;
+  min-height: 0;
   padding: var(--space-4);
+  overflow: auto;
 }
 
 .receipt-actions {
   position: sticky;
   bottom: 0;
   display: flex;
+  flex: none;
   gap: var(--space-2);
   margin: 0;
   padding: var(--space-3) var(--space-4);
@@ -1508,6 +1537,10 @@ pre,
     gap: 2px;
   }
 
+  .receipt-detail {
+    grid-template-columns: 1fr;
+  }
+
   .source-key {
     position: static;
     width: auto;
@@ -1543,8 +1576,20 @@ pre,
     animation: evidence-in 200ms ease-out;
   }
 
+  .receipt-backdrop {
+    animation: receipt-backdrop-in 160ms ease-out;
+  }
+
+  .receipt-backdrop.is-closing {
+    animation: receipt-backdrop-out 160ms ease-in;
+  }
+
   .receipt-panel {
     animation: receipt-in 200ms ease-out;
+  }
+
+  .receipt-panel.is-closing {
+    animation: receipt-out 160ms ease-in;
   }
 
   button,
@@ -1603,15 +1648,47 @@ pre,
     }
   }
 
-  @keyframes receipt-in {
+  @keyframes receipt-backdrop-in {
     from {
       opacity: 0;
-      transform: scale(0.98);
     }
 
     to {
       opacity: 1;
-      transform: none;
+    }
+  }
+
+  @keyframes receipt-backdrop-out {
+    from {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes receipt-in {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.98);
+    }
+
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%);
+    }
+  }
+
+  @keyframes receipt-out {
+    from {
+      opacity: 1;
+      transform: translate(-50%, -50%);
+    }
+
+    to {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.98);
     }
   }
 }
