@@ -13,9 +13,17 @@ function loadFixture(name: string): QueryResponse {
   return JSON.parse(raw) as QueryResponse;
 }
 
+export type MockGatewayOverlays = {
+  directoryRows?: Record<string, unknown>[];
+  rosterRows?: Record<string, unknown>[];
+  claimsRows?: Record<string, unknown>[];
+};
+
 export class MockGateway implements Gateway {
   private readonly receipts = new Map<string, Receipt>();
   private readonly tampered = new Set<string>();
+
+  constructor(private readonly overlays: MockGatewayOverlays = {}) {}
 
   tamper(receiptId: string): void {
     this.tampered.add(receiptId);
@@ -30,6 +38,13 @@ export class MockGateway implements Gateway {
           : "claims_by_npis";
     const fixture = loadFixture(fixtureName);
     let rows = fixture.rows;
+    if (templateId === "directory_batch" && this.overlays.directoryRows) {
+      rows = this.overlays.directoryRows;
+    } else if (templateId === "roster_by_npis" && this.overlays.rosterRows) {
+      rows = this.overlays.rosterRows;
+    } else if (templateId === "claims_by_npis" && this.overlays.claimsRows) {
+      rows = this.overlays.claimsRows;
+    }
     if (templateId === "directory_batch") {
       if (params.batch) {
         rows = rows.filter((row) => (row as { batch?: string }).batch === params.batch);
