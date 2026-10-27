@@ -21,12 +21,14 @@ import { MemoryResults } from "./components/MemoryResults";
 import { OutreachQueue } from "./components/OutreachQueue";
 import { ReceiptPanel } from "./components/ReceiptPanel";
 import { RunLauncher } from "./components/RunLauncher";
+import { useTheme } from "./theme";
 import type { EvidenceCard, Receipt, RunRequest, Ruling, TrustRow, WmEvent } from "./types";
 
 type Badge = "LIVE" | "REPLAY" | "UNKNOWN";
 type LoadState = "idle" | "loading" | "ready" | "error";
 
 export default function App() {
+  const { theme, toggleTheme } = useTheme();
   const [badge, setBadge] = useState<Badge>("UNKNOWN");
   const [healthState, setHealthState] = useState<LoadState>("loading");
   const [healthError, setHealthError] = useState<string | null>(null);
@@ -261,6 +263,15 @@ export default function App() {
           </ul>
         </div>
         <div className="header-meta">
+          <button
+            type="button"
+            className="theme-toggle"
+            aria-pressed={theme === "dark"}
+            title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+            onClick={toggleTheme}
+          >
+            {theme === "dark" ? "Dark" : "Light"}
+          </button>
           {healthState === "loading" ? (
             <p className="header-note">Checking agents…</p>
           ) : (
@@ -284,6 +295,11 @@ export default function App() {
         <a href="#memory">Memory and results</a>
       </nav>
       <div className="panels">
+        <section className="intro panel panel-wide" aria-label="About this tool">
+          <p>Ghost Network Auditor checks provider listings against claims, rosters, and prior rulings.</p>
+          <p>Each finding keeps its sources, its confidence, and the receipt that supports it.</p>
+          <p className="intro-cta">Choose a batch and press Start.</p>
+        </section>
         <section id="launcher" className="panel panel-wide">
           <div className="panel-head">
             <h2>Run launcher</h2>
