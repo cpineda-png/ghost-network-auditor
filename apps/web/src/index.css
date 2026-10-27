@@ -778,6 +778,13 @@ fieldset:disabled {
   text-align: center;
 }
 
+.timeline-scroll {
+  max-height: 50vh;
+  margin-top: var(--space-3);
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
 .timeline {
   margin: 0;
   padding: 0;
@@ -1298,7 +1305,8 @@ tbody tr:hover {
   background: var(--table-hover);
 }
 
-pre {
+pre,
+.sql-block {
   padding: var(--space-3);
   overflow-x: auto;
   border: 1px solid var(--border);
@@ -1309,6 +1317,96 @@ pre {
   white-space: pre-wrap;
 }
 
+.sql-collapsed {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.section-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.section-tools h4 {
+  margin: 0;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.filter-row button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.filter-row button[aria-pressed="true"],
+.section-tools button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.show-more {
+  margin-top: var(--space-3);
+}
+
+.receipt-rows {
+  max-width: 100%;
+  overflow-x: scroll;
+  scrollbar-color: var(--border-strong) var(--surface-muted);
+  scrollbar-width: thin;
+}
+
+.receipt-rows::-webkit-scrollbar {
+  height: 10px;
+}
+
+.receipt-rows::-webkit-scrollbar-track {
+  background: var(--surface-muted);
+}
+
+.receipt-rows::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--border-strong);
+}
+
+.receipt-rows table {
+  width: max-content;
+  min-width: 100%;
+  font-size: var(--text-xs);
+}
+
+.receipt-rows th,
+.receipt-rows td {
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+.receipt-rows th:first-child,
+.receipt-rows td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+  box-shadow: 1px 0 0 var(--border);
+}
+
+.receipt-rows thead th:first-child {
+  z-index: 2;
+  background: var(--surface-muted);
+}
+
 .receipt-panel {
   position: fixed;
   top: var(--space-5);
@@ -1316,11 +1414,12 @@ pre {
   bottom: auto;
   left: auto;
   z-index: 3;
-  width: min(32rem, calc(100vw - 48px));
+  width: min(46rem, calc(100vw - 48px));
   max-height: calc(100vh - 48px);
   margin: 0;
   padding: 0;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
   background: var(--surface);

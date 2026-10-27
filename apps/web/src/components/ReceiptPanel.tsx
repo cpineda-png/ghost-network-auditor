@@ -1,5 +1,15 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Receipt } from "../types";
+
+const KEY_COLUMNS = [
+  "listing_id",
+  "provider_name",
+  "specialty",
+  "address_line1",
+  "phone",
+  "accepting_new_patients",
+  "network_status",
+];
 
 type Props = {
   receipt: Receipt | null;
@@ -25,6 +35,8 @@ export function ReceiptPanel({
   const open = Boolean(receipt || loading || error);
   const panelRef = useRef<HTMLDialogElement>(null);
   const onCloseRef = useRef(onClose);
+  const [sqlOpen, setSqlOpen] = useState(false);
+  const [allColumns, setAllColumns] = useState(false);
   onCloseRef.current = onClose;
 
   useEffect(() => {
@@ -39,7 +51,11 @@ export function ReceiptPanel({
 
   if (!open) return null;
   const rows = receipt?.rowsPreview.filter((row): row is Record<string, unknown> => isRow(row)) ?? [];
-  const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
+  const columns = rows.length > 0 ? Object.keys(rows[0]!) : [];
+  const keyColumns = KEY_COLUMNS.filter((column) => columns.includes(column));
+  const orderedColumns = [...keyColumns, ...columns.filter((column) => !keyColumns.includes(column))];
+  const shownColumns = allColumns || keyColumns.length === 0 ? orderedColumns : keyColumns;
+  const hiddenColumnCount = orderedColumns.length - keyColumns.length;
   const showMatch = replayLoading || match !== null || Boolean(matchError);
   const replayLabel = replayLoading ? "Replaying…" : match !== null ? "Replay again" : "Replay";
 
@@ -99,17 +115,31 @@ export function ReceiptPanel({
                 </div>
               ) : null}
             </dl>
-            <h4>SQL</h4>
-            <pre>{receipt.sql}</pre>
-            <h4>Rows</h4>
+            <div className="section-tools">
+              <h4>SQL</h4>
+              <button type="button" aria-expanded={sqlOpen} aria-controls="receipt-sql" onClick={() => setSqlOpen((openSql) => !openSql)}>
+                {sqlOpen ? "Hide SQL" : "Show SQL"}
+              </button>
+            </div>
+            <pre id="receipt-sql" className={sqlOpen ? "sql-block" : "sql-block sql-collapsed"}>
+              {receipt.sql}
+            </pre>
+            <div className="section-tools">
+              <h4>Rows</h4>
+              {keyColumns.length > 0 && hiddenColumnCount > 0 ? (
+                <button type="button" aria-pressed={allColumns} onClick={() => setAllColumns((showAll) => !showAll)}>
+                  Show all columns
+                </button>
+              ) : null}
+            </div>
             {rows.length === 0 ? (
               <p className="empty-state">No rows in this preview.</p>
             ) : (
-              <div className="table-wrap">
+              <div className="receipt-rows">
                 <table>
                   <thead>
                     <tr>
-                      {columns.map((column) => (
+                      {shownColumns.map((column) => (
                         <th key={column} scope="col">
                           {column}
                         </th>
@@ -119,7 +149,7 @@ export function ReceiptPanel({
                   <tbody>
                     {rows.map((row, index) => (
                       <tr key={index}>
-                        {columns.map((column) => (
+                        {shownColumns.map((column) => (
                           <td key={column}>{String(row[column] ?? "")}</td>
                         ))}
                       </tr>

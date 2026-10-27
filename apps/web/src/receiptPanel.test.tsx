@@ -47,4 +47,37 @@ describe("receipt panel", () => {
     render(<ReceiptPanel receipt={receipt} replayLoading onClose={() => undefined} />);
     expect(screen.getByRole("button", { name: "Replaying…" })).toBeDisabled();
   });
+
+  it("shows key columns until all columns are requested", async () => {
+    const user = userEvent.setup();
+    const wide: Receipt = {
+      ...receipt,
+      rowsPreview: [
+        {
+          listing_id: "L-1",
+          provider_name: "Ada Lovelace",
+          specialty: "cardiology",
+          address_line1: "1 Main",
+          phone: "555-0100",
+          accepting_new_patients: true,
+          network_status: "in",
+          npi: "1234567890",
+          city: "Springfield",
+        },
+      ],
+    };
+    render(<ReceiptPanel receipt={wide} onClose={() => undefined} />);
+
+    expect(screen.getByRole("columnheader", { name: "listing_id" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "network_status" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "npi" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show SQL" })).toHaveAttribute("aria-expanded", "false");
+
+    const toggle = screen.getByRole("button", { name: "Show all columns" });
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("columnheader", { name: "npi" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "city" })).toBeInTheDocument();
+  });
 });
