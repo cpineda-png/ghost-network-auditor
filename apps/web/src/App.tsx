@@ -232,16 +232,45 @@ export default function App() {
 
   return (
     <main>
-      <header>
-        <h1>Ghost Network Auditor</h1>
-        {healthState === "loading" ? (
-          <p>Checking agents…</p>
-        ) : (
-          <span className={`badge badge-${badge.toLowerCase()}`}>{badge}</span>
-        )}
+      <a className="skip-link" href="#launcher">
+        Skip to run launcher
+      </a>
+      <header className="app-header">
+        <div className="brand">
+          <h1>Ghost Network Auditor</h1>
+          <p className="tagline">Audit provider listings against claims, rosters, and prior rulings.</p>
+          <ul className="legend" aria-label="Status meanings">
+            <li>
+              <span className="status status-applied">Applied</span>
+            </li>
+            <li>
+              <span className="status status-escalated">Escalated</span>
+            </li>
+            <li>
+              <span className="status status-unchanged">Unchanged</span>
+            </li>
+            <li>
+              <span className="status status-human">Needs a human</span>
+            </li>
+          </ul>
+        </div>
+        <div className="header-meta">
+          {healthState === "loading" ? (
+            <p className="header-note">Checking agents…</p>
+          ) : (
+            <span className={`badge badge-${badge.toLowerCase()}`} title={badgeTitle(badge)}>
+              {badge}
+            </span>
+          )}
+        </div>
       </header>
-      {healthError ? <p role="alert">{healthError}</p> : null}
-      <nav aria-label="Sections">
+      {healthError ? (
+        <div className="error-banner" role="alert">
+          <p className="error-title">{healthError}</p>
+          <p className="error-hint">Agents are unreachable. Check that the agents service is running, then reload this page.</p>
+        </div>
+      ) : null}
+      <nav className="section-nav" aria-label="Sections">
         <a href="#launcher">Run launcher</a>
         <a href="#live-run">Live run</a>
         <a href="#evidence">Evidence card</a>
@@ -250,36 +279,64 @@ export default function App() {
       </nav>
       <div className="panels">
         <section id="launcher" className="panel panel-wide">
-          <h2>Run launcher</h2>
+          <div className="panel-head">
+            <h2>Run launcher</h2>
+            <p className="panel-desc">Choose a batch and press Start.</p>
+          </div>
           <RunLauncher running={running} onStart={start} />
-          {starting ? <p>Starting run…</p> : null}
-          {runId ? <p>Run {runId}</p> : null}
-          {launcherError ? <p role="alert">{launcherError}</p> : null}
+          {starting ? <p className="loading-line">Starting run…</p> : null}
+          {runId ? <p className="run-id mono">Run {runId}</p> : null}
+          {launcherError ? (
+            <div className="error-banner" role="alert">
+              <p className="error-title">{launcherError}</p>
+              <p className="error-hint">The run did not start. Check the agents service, then press Start again.</p>
+            </div>
+          ) : null}
         </section>
         <section id="live-run" className="panel panel-wide">
-          <h2>Live run</h2>
-          {liveError ? <p role="alert">{liveError}</p> : null}
+          <div className="panel-head">
+            <h2>Live run</h2>
+            <p className="panel-desc">Each actor reports here while the run is in progress.</p>
+          </div>
+          {liveError ? (
+            <div className="error-banner" role="alert">
+              <p className="error-title">{liveError}</p>
+              <p className="error-hint">
+                Check that the agents service is running and can reach the gateway, then press Start again.
+              </p>
+            </div>
+          ) : null}
           <LiveRun events={events} report={report} settled={settled} running={running && !starting} />
         </section>
         <section id="evidence" className="panel">
-          <h2>Evidence card</h2>
+          <div className="panel-head">
+            <h2>Evidence card</h2>
+            <p className="panel-desc">Sources, confidence, and the critic verdict for each field.</p>
+          </div>
           <EvidenceCards
             cards={cards}
             runId={runId}
             loading={cardsState === "loading"}
             error={cardsError}
             settled={settled}
+            running={running}
             memoryIds={memoryIds}
             onOpenReceipt={openReceipt}
             onSubmitRuling={(ruling) => submitRuling(ruling)}
           />
         </section>
         <section id="outreach" className="panel">
-          <h2>Outreach queue</h2>
-          <OutreachQueue runId={runId} cards={cards} memoryIds={memoryIds} onSubmit={submitRuling} />
+          <div className="panel-head">
+            <h2>Outreach queue</h2>
+            <p className="panel-desc">Rule on listings that need a human.</p>
+          </div>
+          <OutreachQueue runId={runId} cards={cards} memoryIds={memoryIds} running={running} onSubmit={submitRuling} />
         </section>
-        <section id="memory" className="panel">
-          <h2>Memory and results</h2>
+        <section id="memory" className="panel panel-wide">
+          <div className="panel-head">
+            <h2>Memory and results</h2>
+            <p className="panel-desc">Trust scores, the run report, and cold versus warm.</p>
+          </div>
           <MemoryResults
             trust={trust}
             trustState={trustState}
@@ -290,6 +347,7 @@ export default function App() {
             reportState={reportState}
             reportError={reportError}
             runId={settled ? runId : null}
+            running={running}
           />
         </section>
       </div>
@@ -304,4 +362,10 @@ export default function App() {
       />
     </main>
   );
+}
+
+function badgeTitle(badge: Badge): string {
+  if (badge === "LIVE") return "Models are called live";
+  if (badge === "REPLAY") return "Models are replayed from stored responses";
+  return "Agents health has not been confirmed";
 }

@@ -14,6 +14,7 @@ type Props = {
   reportState: LoadState;
   reportError: string | null;
   runId: string | null;
+  running?: boolean;
 };
 
 export function MemoryResults({
@@ -26,17 +27,26 @@ export function MemoryResults({
   reportState,
   reportError,
   runId,
+  running = false,
 }: Props) {
   const diff = useDiffHref(runId);
 
   return (
     <div>
       <h3>Trust</h3>
-      {trustState === "loading" ? <p>Loading trust…</p> : null}
-      {trustError ? <p role="alert">{trustError}</p> : null}
+      {trustState === "loading" ? <p className="loading-state">Loading trust scores…</p> : null}
+      {trustError ? (
+        <div className="error-banner" role="alert">
+          <p className="error-title">{trustError}</p>
+          <p className="error-hint">Trust scores did not load. Check the agents service, then reload this page.</p>
+        </div>
+      ) : null}
       {trustState === "loading" ? null : trust.length === 0 ? (
-        <p className="muted">No trust rows.</p>
+        trustError ? null : (
+          <p className="empty-state">No trust rows yet. Scores appear after a ruling is stored.</p>
+        )
       ) : (
+        <div className="table-wrap">
         <table>
           <thead>
             <tr>
@@ -61,30 +71,67 @@ export function MemoryResults({
             ))}
           </tbody>
         </table>
+        </div>
       )}
       <h3>Report</h3>
-      {reportState === "loading" ? <p>Loading report…</p> : null}
-      {reportError ? <p role="alert">{reportError}</p> : null}
+      {reportState === "loading" ? <p className="loading-state">Loading the run report…</p> : null}
+      {reportError ? (
+        <div className="error-banner" role="alert">
+          <p className="error-title">{reportError}</p>
+          <p className="error-hint">The report did not load. Check the agents service, then start the batch again.</p>
+        </div>
+      ) : null}
       {report ? (
         <ul className="counts">
-          <li>Applied {report.applied}</li>
-          <li>Escalated {report.escalated}</li>
-          <li>Ghosts {report.ghosts}</li>
-          <li>Memory hits {report.memoryHits}</li>
-          <li>Models {modelText(report.models)}</li>
+          <li>
+            <span className="status status-applied">Applied</span>
+            <span className="count-num">{report.applied}</span>
+          </li>
+          <li>
+            <span className="status status-escalated">Escalated</span>
+            <span className="count-num">{report.escalated}</span>
+          </li>
+          <li>
+            <span className="status status-human">Ghosts</span>
+            <span className="count-num">{report.ghosts}</span>
+          </li>
+          <li>
+            <span className="count-label">Memory hits</span>
+            <span className="count-num">{report.memoryHits}</span>
+          </li>
+          <li>
+            <span className="count-label">Models</span>
+            <span>{modelText(report.models)}</span>
+          </li>
         </ul>
-      ) : reportState === "loading" || reportError ? null : (
-        <p className="muted">No report yet.</p>
+      ) : reportState === "loading" || reportError ? null : running ? (
+        <p className="loading-state">Waiting for this run to finish. The report loads next.</p>
+      ) : (
+        <p className="empty-state">No report yet. Choose a batch and press Start.</p>
       )}
       <h3>Cold versus warm</h3>
       <ul className="counts">
-        <li>Cold escalations {cold ? cold.escalated : "—"}</li>
-        <li>Warm escalations {warm ? warm.escalated : "—"}</li>
+        <li>
+          <span className="count-label">Cold escalations</span>
+          <span className="count-num">{cold ? cold.escalated : "—"}</span>
+        </li>
+        <li>
+          <span className="count-label">Warm escalations</span>
+          <span className="count-num">{warm ? warm.escalated : "—"}</span>
+        </li>
       </ul>
-      {diff.loading ? <p>Loading diff…</p> : null}
-      {diff.error ? <p role="alert">{diff.error}</p> : null}
+      {!cold && !warm ? (
+        <p className="field-hint">These counts fill in after a cold run and a warm run finish.</p>
+      ) : null}
+      {diff.loading ? <p className="loading-state">Loading the diff file…</p> : null}
+      {diff.error ? (
+        <div className="error-banner" role="alert">
+          <p className="error-title">{diff.error}</p>
+          <p className="error-hint">The diff did not load. Check the agents service, then start the batch again.</p>
+        </div>
+      ) : null}
       {diff.href ? (
-        <a href={diff.href} download={`diff-${runId ?? "run"}.csv`}>
+        <a className="link-button" href={diff.href} download={`diff-${runId ?? "run"}.csv`}>
           Download diff.csv
         </a>
       ) : null}

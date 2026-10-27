@@ -7,13 +7,26 @@ type Props = {
   runId: string | null;
   cards: EvidenceCard[];
   memoryIds: Record<string, string>;
+  running?: boolean;
   onSubmit: (ruling: Ruling) => Promise<string>;
 };
 
-export function OutreachQueue({ runId, cards, memoryIds, onSubmit }: Props) {
+export function OutreachQueue({ runId, cards, memoryIds, running = false, onSubmit }: Props) {
   const queue = cards.filter((card) => card.status === "escalated");
-  if (!runId || queue.length === 0) {
-    return <p className="muted">No escalations in this run.</p>;
+  if (queue.length === 0) {
+    if (running) {
+      return (
+        <p className="loading-state">
+          Waiting for this run to finish. Escalations show up here if a field needs a ruling.
+        </p>
+      );
+    }
+    if (!runId) {
+      return (
+        <p className="empty-state">Choose a batch and press Start. Escalations that need a ruling show up here.</p>
+      );
+    }
+    return <p className="empty-state">No escalations in this run.</p>;
   }
   return (
     <div className="card-list">
@@ -73,6 +86,7 @@ export function RulingForm({
   card,
   memoryId,
   showGhostLabel = true,
+  showHeading = true,
   onSubmit,
 }: {
   formId: string;
@@ -80,6 +94,7 @@ export function RulingForm({
   card: EvidenceCard;
   memoryId: string | null;
   showGhostLabel?: boolean;
+  showHeading?: boolean;
   onSubmit: (ruling: Ruling) => Promise<string>;
 }) {
   const [selected, setSelected] = useState<number | null>(null);
@@ -92,6 +107,8 @@ export function RulingForm({
   const ghost = isPossibleGhost(card);
   const locked = pending || memoryId !== null;
   const group = `choice-${formId}-${card.listingId}-${card.field}`;
+  const fieldSlug = `${formId}-${card.listingId}-${card.field}`.replace(/[^a-zA-Z0-9_-]/g, "-");
+  const otherId = `other-${fieldSlug}`;
 
   return (
     <form
@@ -122,13 +139,15 @@ export function RulingForm({
         }
       }}
     >
-      <h3>
-        {listingName(card.listingId)} · {card.field}
-      </h3>
+      {showHeading ? (
+        <h3>
+          {listingName(card.listingId)} · {card.field}
+        </h3>
+      ) : null}
       {showGhostLabel && ghost ? <p className="needs-human">Possible ghost, needs analyst</p> : null}
       {!ghost && human.ghost ? <p className="needs-human">Needs a human: ghost listing</p> : null}
       {!ghost && human.notAccepting ? <p className="needs-human">Needs a human: not accepting change</p> : null}
-      <fieldset disabled={locked}>
+      <fieldset className="choice-list" disabled={locked}>
         <legend>Pick a value</legend>
         {card.sources.map((source, index) => (
           <label key={`${source.source}-${index}`}>
@@ -142,21 +161,34 @@ export function RulingForm({
           </label>
         ))}
       </fieldset>
-      <label>
+      <label htmlFor={otherId}>
         Other value
-        <input value={typed} disabled={locked} onChange={(event) => setTyped(event.target.value)} />
+        <input
+          id={otherId}
+          value={typed}
+          disabled={locked}
+          aria-describedby={`${otherId}-hint`}
+          onChange={(event) => setTyped(event.target.value)}
+        />
       </label>
+      <p id={`${otherId}-hint`} className="field-hint">
+        Use this when none of the sources is right.
+      </p>
       <label>
         Note
-        <textarea value={note} disabled={locked} onChange={(event) => setNote(event.target.value)} />
+        <textarea rows={3} value={note} disabled={locked} onChange={(event) => setNote(event.target.value)} />
       </label>
       <label>
         Analyst
         <input value={analyst} disabled={locked} onChange={(event) => setAnalyst(event.target.value)} />
       </label>
-      {error ? <p role="alert">{error}</p> : null}
-      {memoryId ? <p>Memory {memoryId}</p> : null}
-      <button type="submit" disabled={locked}>
+      {error ? (
+        <p className="error-banner" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {memoryId ? <p className="memory-saved">Memory {memoryId}</p> : null}
+      <button className="primary" type="submit" disabled={locked}>
         Submit ruling
       </button>
     </form>

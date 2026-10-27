@@ -14,6 +14,7 @@ export function RunLauncher({ running, onStart }: Props) {
 
   return (
     <form
+      className="launcher-form"
       onSubmit={(event) => {
         event.preventDefault();
         const scope: RunRequest["scope"] = { batch };
@@ -49,26 +50,32 @@ export function RunLauncher({ running, onStart }: Props) {
       </fieldset>
       <label>
         County
-        <input value={county} onChange={(event) => setCounty(event.target.value)} />
+        <input value={county} placeholder="Optional" onChange={(event) => setCounty(event.target.value)} />
       </label>
       <label>
         Specialty
-        <input value={specialty} onChange={(event) => setSpecialty(event.target.value)} />
-      </label>
-      <label>
         <input
-          type="checkbox"
-          checked={useMemory}
-          onChange={(event) => setUseMemory(event.target.checked)}
+          value={specialty}
+          placeholder="Optional"
+          onChange={(event) => setSpecialty(event.target.value)}
         />
-        Use memory
       </label>
-      <p className="run-mode" aria-live="polite">
-        {useMemory ? "Warm" : "Cold"}
-      </p>
-      <button type="submit" disabled={running}>
-        Start
-      </button>
+      <div className="launcher-actions">
+        <label className="inline-check">
+          <input
+            type="checkbox"
+            checked={useMemory}
+            onChange={(event) => setUseMemory(event.target.checked)}
+          />
+          Use memory
+        </label>
+        <p className="run-mode" aria-live="polite">
+          <span className="mode-pill">{useMemory ? "Warm" : "Cold"}</span>
+        </p>
+        <button className="primary" type="submit" disabled={running}>
+          Start
+        </button>
+      </div>
     </form>
   );
 }
