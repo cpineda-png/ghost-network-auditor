@@ -289,10 +289,11 @@ export default function App() {
       ) : null}
       <nav className="section-nav" aria-label="Sections">
         <a href="#launcher">Run launcher</a>
-        <a href="#live-run">Live run</a>
-        <a href="#evidence">Evidence card</a>
+        <a href="#timeline">Timeline</a>
+        <a href="#evidence">Evidence</a>
         <a href="#outreach">Outreach queue</a>
-        <a href="#memory">Memory and results</a>
+        <a href="#memory">Memory</a>
+        <a href="#results">Results</a>
       </nav>
       <div className="panels">
         <section className="intro panel panel-wide" aria-label="About this tool">
@@ -315,63 +316,67 @@ export default function App() {
             </div>
           ) : null}
         </section>
-        <section id="live-run" className="panel panel-wide">
-          <div className="panel-head">
-            <h2>Live run</h2>
-            <p className="panel-desc">Events from each actor, in the order they arrive.</p>
-          </div>
-          {liveError ? (
-            <div className="error-banner" role="alert">
-              <p className="error-title">{liveError}</p>
-              <p className="error-hint">
-                Check that the agents service is running and can reach the gateway, then press Start again.
-              </p>
+        <div className="workbench">
+          <section id="timeline" className="panel">
+            <div className="panel-head">
+              <h2>Live run</h2>
+              <p className="panel-desc">Events from each actor, in the order they arrive.</p>
             </div>
-          ) : null}
-          <LiveRun events={events} report={report} settled={settled} running={running} />
-        </section>
-        <section id="evidence" className="panel">
-          <div className="panel-head">
-            <h2>Evidence card</h2>
-            <p className="panel-desc">Sources, confidence, and the critic verdict for each field.</p>
-          </div>
-          <EvidenceCards
-            cards={cards}
-            runId={runId}
-            loading={cardsState === "loading"}
-            error={cardsError}
-            settled={settled}
-            running={running}
-            memoryIds={memoryIds}
-            onOpenReceipt={openReceipt}
-            onSubmitRuling={(ruling) => submitRuling(ruling)}
-          />
-        </section>
-        <section id="outreach" className="panel">
-          <div className="panel-head">
-            <h2>Outreach queue</h2>
-            <p className="panel-desc">Rule on listings that need a human.</p>
-          </div>
-          <OutreachQueue runId={runId} cards={cards} memoryIds={memoryIds} running={running} onSubmit={submitRuling} />
-        </section>
-        <section id="memory" className="panel panel-wide">
-          <div className="panel-head">
-            <h2>Memory and results</h2>
-            <p className="panel-desc">Trust scores, the run report, and cold versus warm.</p>
-          </div>
-          <MemoryResults
-            trust={trust}
-            trustState={trustState}
-            trustError={trustError}
-            cold={coldReport}
-            warm={warmReport}
-            report={settled ? report : null}
-            reportState={reportState}
-            reportError={reportError}
-            runId={settled ? runId : null}
-            running={running}
-          />
-        </section>
+            {liveError ? (
+              <div className="error-banner" role="alert">
+                <p className="error-title">{liveError}</p>
+                <p className="error-hint">
+                  Check that the agents service is running and can reach the gateway, then press Start again.
+                </p>
+              </div>
+            ) : null}
+            <LiveRun events={events} report={report} settled={settled} running={running} />
+          </section>
+          <aside className="work-side">
+            <section id="memory" className="panel">
+              <div className="panel-head">
+                <h2>Memory and results</h2>
+                <p className="panel-desc">Trust scores, the run report, and cold versus warm.</p>
+              </div>
+              <MemoryResults
+                trust={trust}
+                trustState={trustState}
+                trustError={trustError}
+                cold={coldReport}
+                warm={warmReport}
+                report={settled ? report : null}
+                reportState={reportState}
+                reportError={reportError}
+                runId={settled ? runId : null}
+                running={running}
+              />
+            </section>
+          </aside>
+          <section id="evidence" className="panel">
+            <div className="panel-head">
+              <h2>Evidence card</h2>
+              <p className="panel-desc">Sources, confidence, and the critic verdict for each field.</p>
+            </div>
+            <EvidenceCards
+              cards={cards}
+              runId={runId}
+              loading={cardsState === "loading"}
+              error={cardsError}
+              settled={settled}
+              running={running}
+              memoryIds={memoryIds}
+              onOpenReceipt={openReceipt}
+              onSubmitRuling={(ruling) => submitRuling(ruling)}
+            />
+          </section>
+          <section id="outreach" className="panel">
+            <div className="panel-head">
+              <h2>Outreach queue</h2>
+              <p className="panel-desc">Rule on listings that need a human.</p>
+            </div>
+            <OutreachQueue runId={runId} cards={cards} memoryIds={memoryIds} running={running} onSubmit={submitRuling} />
+          </section>
+        </div>
       </div>
       <ReceiptPanel
         receipt={receipt}

@@ -73,6 +73,7 @@ export function MemoryResults({
         </table>
         </div>
       )}
+      <div id="results">
       <h3>Report</h3>
       {reportState === "loading" ? <p className="loading-state">Loading the run report…</p> : null}
       {reportError ? (
@@ -135,6 +136,7 @@ export function MemoryResults({
           Download diff.csv
         </a>
       ) : null}
+      </div>
     </div>
   );
 }

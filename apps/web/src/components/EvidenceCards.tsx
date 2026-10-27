@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { listingName } from "../fixtures";
 import { formatValue, isPossibleGhost } from "../format";
 import { THRESHOLDS, type EvidenceCard, type Ruling } from "../types";
@@ -27,6 +28,7 @@ export function EvidenceCards({
   onOpenReceipt,
   onSubmitRuling,
 }: Props) {
+  const [openKey, setOpenKey] = useState<string | null>(null);
   if (loading) return <p className="loading-state">Loading evidence… Cards appear when the request finishes.</p>;
   if (error) {
     return (
@@ -48,17 +50,22 @@ export function EvidenceCards({
     );
   }
   return (
-    <div className="card-list">
-      {cards.map((card) => (
-        <EvidenceCardView
-          key={`${card.listingId}:${card.field}`}
-          card={card}
-          runId={runId}
-          memoryId={memoryIds[`${card.listingId}:${card.field}`] ?? null}
-          onOpenReceipt={onOpenReceipt}
-          onSubmitRuling={onSubmitRuling}
-        />
-      ))}
+    <div className="evidence-scroll card-list" role="region" aria-label="Evidence cards" tabIndex={0}>
+      {cards.map((card) => {
+        const key = `${card.listingId}:${card.field}`;
+        return (
+          <EvidenceCardView
+            key={key}
+            card={card}
+            runId={runId}
+            memoryId={memoryIds[`${card.listingId}:${card.field}`] ?? null}
+            expanded={openKey === key}
+            onToggle={() => setOpenKey((current) => (current === key ? null : key))}
+            onOpenReceipt={onOpenReceipt}
+            onSubmitRuling={onSubmitRuling}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -67,12 +74,16 @@ export function EvidenceCardView({
   card,
   runId = null,
   memoryId = null,
+  expanded = false,
+  onToggle,
   onOpenReceipt,
   onSubmitRuling,
 }: {
   card: EvidenceCard;
   runId?: string | null;
   memoryId?: string | null;
+  expanded?: boolean;
+  onToggle?: () => void;
   onOpenReceipt: (receiptId: string) => void;
   onSubmitRuling?: (ruling: Ruling) => Promise<string>;
 }) {
@@ -80,6 +91,7 @@ export function EvidenceCardView({
     card.confidence !== null && card.confidence < THRESHOLDS.retryFloor ? "escalated" : card.status;
   const directory = card.sources.find((source) => source.source === "directory");
   const ghost = isPossibleGhost(card);
+  const detailsId = evidenceDetailsId(card);
 
   return (
     <article className="evidence-card">
@@ -87,36 +99,61 @@ export function EvidenceCardView({
         <h3>
           {listingName(card.listingId)} · {card.field}
         </h3>
-        <span className={`status status-${statusKind(shownStatus)}`} role="status">
-          {statusLabel(shownStatus)}
-        </span>
+        <button
+          type="button"
+          className="evidence-toggle"
+          aria-expanded={expanded}
+          aria-controls={detailsId}
+          onClick={onToggle}
+        >
+          {expanded ? "Hide evidence" : "Show evidence"}
+        </button>
       </header>
       {ghost ? <p className="needs-human">Possible ghost, needs analyst</p> : null}
-      <dl className="meta">
-        <div>
-          <dt>Field</dt>
-          <dd>{card.field}</dd>
+      <div className="summary-row">
+        <div className="summary-item">
+          <span className="summary-label">Field</span>
+          <span>{card.field}</span>
         </div>
-        <div>
-          <dt>Old value</dt>
-          <dd>{directory ? formatValue(directory.value) : "none"}</dd>
+        <div className="summary-compare">
+          <div className="summary-item">
+            <span className="summary-label">Directory</span>
+            <span>{directory ? formatValue(directory.value) : "none"}</span>
+          </div>
+          <span className="summary-vs" aria-hidden="true">
+            vs
+          </span>
+          <div className="summary-item">
+            <span className="summary-label">Proposed</span>
+            <span>{card.winner ? formatValue(card.winner.value) : "none"}</span>
+          </div>
         </div>
-        <div>
-          <dt>New value</dt>
-          <dd>{card.winner ? formatValue(card.winner.value) : "none"}</dd>
-        </div>
-        <div>
-          <dt>Winning source</dt>
-          <dd>{card.winner ? card.winner.source : "none"}</dd>
-        </div>
-        <div>
-          <dt>Confidence</dt>
-          <dd>
+        <div className="summary-item summary-meter">
+          <span className="summary-label">
+            Confidence{" "}
             <span className="confidence-value">{card.confidence === null ? "none" : card.confidence.toFixed(2)}</span>
-            <ConfidenceMeter confidence={card.confidence} />
-          </dd>
+          </span>
+          <ConfidenceMeter confidence={card.confidence} />
         </div>
-      </dl>
+        <span className={`status status-badge status-${statusKind(shownStatus)}`} role="status">
+          {statusLabel(shownStatus)}
+        </span>
+        <div className="summary-verdicts">
+          <p className="verdict-pair">
+            <span className="summary-label">Critic</span>
+            {card.critique ? (
+              <span className={`verdict verdict-${card.critique.verdict}`}>{verdictLabel(card.critique.verdict)}</span>
+            ) : (
+              <span className="verdict verdict-none">None</span>
+            )}
+          </p>
+          <p className="verdict-pair">
+            <span className="summary-label">Risk</span>
+            <span className={`status status-${statusKind(card.status)}`}>{statusLabel(card.status)}</span>
+          </p>
+        </div>
+      </div>
+      <div id={detailsId} className="evidence-details" hidden={!expanded}>
       <p className="threshold-note">{thresholdText(card.confidence)}</p>
       <div className="source-block">
         <div className="source-head" aria-hidden="true">
@@ -190,8 +227,13 @@ export function EvidenceCardView({
           onSubmit={onSubmitRuling}
         />
       ) : null}
+      </div>
     </article>
   );
+}
+
+function evidenceDetailsId(card: EvidenceCard): string {
+  return `evidence-details-${card.listingId}-${card.field}`.replace(/[^A-Za-z0-9_-]/g, "-");
 }
 
 function statusKind(status: string): string {
