@@ -78,6 +78,36 @@ export function createNemotronClient(config: NemotronConfig = readNemotronConfig
   return new NightshiftLlmClient(config);
 }
 
+const RECEIPT_ID = /rcpt_[0-9a-f]{16}/g;
+
+export function alignReceiptIds(recorded: unknown, current: unknown): Map<string, string> {
+  const oldIds = receiptIdsIn(recorded);
+  const newIds = receiptIdsIn(current);
+  const map = new Map<string, string>();
+  if (oldIds.length !== newIds.length) return map;
+  const conflicts = new Set<string>();
+  for (let index = 0; index < oldIds.length; index++) {
+    const from = oldIds[index];
+    const to = newIds[index];
+    if (from === undefined || to === undefined) continue;
+    const prior = map.get(from);
+    if (prior === undefined) map.set(from, to);
+    else if (prior !== to) conflicts.add(from);
+  }
+  for (const id of conflicts) map.delete(id);
+  return map;
+}
+
+export function applyReceiptIds(content: string, map: Map<string, string>): string {
+  if (map.size === 0) return content;
+  return content.replace(RECEIPT_ID, (id) => map.get(id) ?? id);
+}
+
+function receiptIdsIn(value: unknown): string[] {
+  if (value === undefined) return [];
+  return JSON.stringify(value).match(RECEIPT_ID) ?? [];
+}
+
 export function replayKey(role: ChatRole, model: string, messages: ChatMessage[]): string {
   return createHash("sha256")
     .update(role + model + JSON.stringify(stripPerRun(messages)))
@@ -140,7 +170,7 @@ class NightshiftLlmClient implements LlmClient {
     if (process.env.LLM_REPLAY === "true") {
       if (!existsSync(file)) throw new ReplayMissError(key);
       const recorded = JSON.parse(readFileSync(file, "utf8")) as LlmRecording;
-      const data = schema.parse(parseContent(recorded.response));
+      const data = schema.parse(parseContent(rewriteRecordedResponse(recorded, messages)));
       return {
         data,
         model: recorded.model,
@@ -228,6 +258,7 @@ type Completion = {
 };
 
 type LlmRecording = {
+  request?: { messages?: ChatMessage[] };
   response: unknown;
   model: string;
   latencyMs: number;
@@ -253,6 +284,15 @@ function meterlessTrace(json: NightshiftChat): { meterlessReceiptId: string | nu
 
 function stringOrNull(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function rewriteRecordedResponse(recorded: LlmRecording, messages: ChatMessage[]): unknown {
+  const response = recorded.response;
+  if (!response || typeof response !== "object" || !("content" in response)) return response;
+  const content = (response as { content: unknown }).content;
+  if (typeof content !== "string") return response;
+  const map = alignReceiptIds(recorded.request?.messages, messages);
+  return { ...response, content: applyReceiptIds(content, map) };
 }
 
 function parseContent(response: unknown): unknown {
