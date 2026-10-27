@@ -44,7 +44,15 @@ type InvestigateInput = {
   sources?: ChunkSources;
 };
 
-export function monthWindow(now = new Date()): { fromMonth: string; toMonth: string } {
+const DEFAULT_DATA_AS_OF_MONTH = "2026-10";
+const YEAR_MONTH = /^(\d{4})-(0[1-9]|1[0-2])$/;
+
+function dataAsOfDate(raw = process.env.DATA_AS_OF_MONTH): Date {
+  const match = YEAR_MONTH.exec(raw?.trim() ?? "") ?? YEAR_MONTH.exec(DEFAULT_DATA_AS_OF_MONTH);
+  return new Date(Date.UTC(Number(match?.[1]), Number(match?.[2]) - 1, 1));
+}
+
+export function monthWindow(now = dataAsOfDate()): { fromMonth: string; toMonth: string } {
   const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const start = new Date(end);
   start.setUTCMonth(start.getUTCMonth() - 13);
