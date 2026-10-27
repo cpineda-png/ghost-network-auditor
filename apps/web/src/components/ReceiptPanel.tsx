@@ -7,6 +7,7 @@ type Props = {
   match?: boolean | null;
   matchError?: string | null;
   replayLoading?: boolean;
+  onReplay?: () => void;
   onClose: () => void;
 };
 
@@ -17,12 +18,14 @@ export function ReceiptPanel({
   match = null,
   matchError = null,
   replayLoading = false,
+  onReplay,
   onClose,
 }: Props) {
   if (!receipt && !loading && !error) return null;
   const rows = receipt?.rowsPreview.filter((row): row is Record<string, unknown> => isRow(row)) ?? [];
   const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
   const showMatch = replayLoading || match !== null || Boolean(matchError);
+  const replayLabel = replayLoading ? "Replaying…" : match !== null ? "Replay again" : "Replay";
 
   return (
     <dialog className="receipt-panel" open aria-labelledby="receipt-title">
@@ -86,8 +89,8 @@ export function ReceiptPanel({
       ) : null}
       {matchError ? <p role="alert">{matchError}</p> : null}
       <p className="receipt-actions">
-        <button type="button" disabled>
-          Replay
+        <button type="button" disabled={!receipt || replayLoading} onClick={onReplay}>
+          {replayLabel}
         </button>
         <button type="button" onClick={onClose}>
           Close

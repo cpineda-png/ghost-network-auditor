@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import { ReceiptPanel } from "./components/ReceiptPanel";
 import type { Receipt } from "./types";
 
@@ -24,6 +25,26 @@ describe("receipt panel", () => {
     expect(screen.getByText(receipt.sql)).toBeInTheDocument();
     expect(screen.getByText("400 Harbor Ave")).toBeInTheDocument();
     expect(screen.getByText("Springfield")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Replay" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Replay" })).toBeEnabled();
+  });
+
+  it("calls onReplay when a loaded receipt is replayed", async () => {
+    const user = userEvent.setup();
+    const onReplay = vi.fn();
+    render(<ReceiptPanel receipt={receipt} onClose={() => undefined} onReplay={onReplay} />);
+
+    await user.click(screen.getByRole("button", { name: "Replay" }));
+
+    expect(onReplay).toHaveBeenCalledTimes(1);
+  });
+
+  it("labels a shown match Replay again", () => {
+    render(<ReceiptPanel receipt={receipt} match onClose={() => undefined} />);
+    expect(screen.getByRole("button", { name: "Replay again" })).toBeEnabled();
+  });
+
+  it("disables replay while replayLoading", () => {
+    render(<ReceiptPanel receipt={receipt} replayLoading onClose={() => undefined} />);
+    expect(screen.getByRole("button", { name: "Replaying…" })).toBeDisabled();
   });
 });
