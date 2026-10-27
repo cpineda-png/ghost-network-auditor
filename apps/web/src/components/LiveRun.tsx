@@ -1,6 +1,9 @@
+import { useEffect, useRef, useState } from "react";
 import type { RunReportView } from "../api";
 import { listingName } from "../fixtures";
 import type { WmEvent } from "../types";
+
+const TIMELINE_LIMIT = 30;
 
 const ACTORS = [
   "planner",
@@ -51,10 +54,26 @@ type Props = {
 };
 
 export function LiveRun({ events, report, settled, running }: Props) {
+  const [showAll, setShowAll] = useState(false);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const stickToBottom = useRef(true);
   const applied = events.filter((event) => event.type === "applied").length;
   const escalated = events.filter((event) => event.type === "escalated").length;
   const retried = events.filter((event) => event.type === "retry_requested").length;
   const started = running || events.length > 0 || settled || report !== null;
+  const visibleEvents = showAll || events.length <= TIMELINE_LIMIT ? events : events.slice(-TIMELINE_LIMIT);
+
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el || !stickToBottom.current) return;
+    el.scrollTop = el.scrollHeight;
+  }, [events, showAll]);
+
+  function onTimelineScroll() {
+    const el = scrollerRef.current;
+    if (!el) return;
+    stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 32;
+  }
 
   return (
     <div>
@@ -90,34 +109,48 @@ export function LiveRun({ events, report, settled, running }: Props) {
               Report applied {report.applied}, escalated {report.escalated}, retried {report.retried}.
             </p>
           ) : null}
-          {ACTORS.map((actor) => {
-            const rows = events.filter((event) => event.actor === actor);
-            if (rows.length === 0 && HIDDEN_WHEN_EMPTY.has(actor)) return null;
-            return (
-              <section key={actor} className="actor-group" aria-label={ACTOR_LABEL[actor]}>
-                <div className="actor-head">
-                  <h3>{ACTOR_LABEL[actor]}</h3>
-                  <span className="count-pill">{rows.length}</span>
-                </div>
-                {rows.length === 0 ? (
-                  <p className="empty-state">
-                    {running ? "Waiting for this actor." : "No events from this actor."}
-                  </p>
-                ) : (
-                  <ol className="timeline">
-                    {rows.map((event) => (
-                      <li key={event.eventId} className="timeline-item">
-                        <span className={`event-type event-${eventTone(event.type)}`}>{EVENT_LABEL[event.type]}</span>
-                        <span className="event-entity">{listingName(event.entityId)}</span>
-                        {event.field ? <span className="event-field">{event.field}</span> : null}
-                        <LlmChip payload={event.payload} />
-                      </li>
-                    ))}
-                  </ol>
-                )}
-              </section>
-            );
-          })}
+          {events.length > TIMELINE_LIMIT ? (
+            <button type="button" aria-pressed={showAll} onClick={() => setShowAll((current) => !current)}>
+              {showAll ? "Show latest 30" : `Show all ${events.length} events`}
+            </button>
+          ) : null}
+          <div
+            className="timeline-scroll"
+            ref={scrollerRef}
+            onScroll={onTimelineScroll}
+            tabIndex={0}
+            role="region"
+            aria-label="Timeline events"
+          >
+            {ACTORS.map((actor) => {
+              const rows = visibleEvents.filter((event) => event.actor === actor);
+              if (rows.length === 0 && HIDDEN_WHEN_EMPTY.has(actor)) return null;
+              return (
+                <section key={actor} className="actor-group" aria-label={ACTOR_LABEL[actor]}>
+                  <div className="actor-head">
+                    <h3>{ACTOR_LABEL[actor]}</h3>
+                    <span className="count-pill">{rows.length}</span>
+                  </div>
+                  {rows.length === 0 ? (
+                    <p className="empty-state">
+                      {running ? "Waiting for this actor." : "No events from this actor."}
+                    </p>
+                  ) : (
+                    <ol className="timeline">
+                      {rows.map((event) => (
+                        <li key={event.eventId} className="timeline-item">
+                          <span className={`event-type event-${eventTone(event.type)}`}>{EVENT_LABEL[event.type]}</span>
+                          <span className="event-entity">{listingName(event.entityId)}</span>
+                          {event.field ? <span className="event-field">{event.field}</span> : null}
+                          <LlmChip payload={event.payload} />
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </section>
+              );
+            })}
+          </div>
         </>
       )}
     </div>

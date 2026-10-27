@@ -18,7 +18,8 @@ import {
 import { EvidenceCards } from "./components/EvidenceCards";
 import { LiveRun } from "./components/LiveRun";
 import { MemoryResults } from "./components/MemoryResults";
-import { OutreachQueue } from "./components/OutreachQueue";
+import { OutreachQueue, outreachCount } from "./components/OutreachQueue";
+import { SideTabList, type SideTab } from "./components/SideTabs";
 import { ReceiptPanel } from "./components/ReceiptPanel";
 import { RunLauncher } from "./components/RunLauncher";
 import { useTheme } from "./theme";
@@ -57,7 +58,9 @@ export default function App() {
   const [settled, setSettled] = useState(false);
   const [launcherError, setLauncherError] = useState<string | null>(null);
   const [liveError, setLiveError] = useState<string | null>(null);
+  const [sideTab, setSideTab] = useState<SideTab>("memory");
   const stopRef = useRef<(() => void) | null>(null);
+  const pendingScroll = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -102,6 +105,13 @@ export default function App() {
       stopRef.current?.();
     };
   }, []);
+
+  useEffect(() => {
+    const anchor = pendingScroll.current;
+    if (!anchor) return;
+    pendingScroll.current = null;
+    scrollToId(anchor);
+  }, [sideTab]);
 
   function remember(next: RunReportView) {
     if (next.useMemory) setWarmReport(next);
@@ -238,6 +248,18 @@ export default function App() {
     return stored.memoryId;
   }
 
+  function selectSideTab(tab: SideTab, anchor: string) {
+    return (event: { preventDefault: () => void }) => {
+      event.preventDefault();
+      pendingScroll.current = anchor;
+      setSideTab(tab);
+      if (tab === sideTab) {
+        pendingScroll.current = null;
+        scrollToId(anchor);
+      }
+    };
+  }
+
   return (
     <main>
       <a className="skip-link" href="#launcher">
@@ -314,9 +336,15 @@ export default function App() {
         <a href="#launcher">Run launcher</a>
         <a href="#timeline">Timeline</a>
         <a href="#evidence">Evidence</a>
-        <a href="#outreach">Outreach queue</a>
-        <a href="#memory">Memory</a>
-        <a href="#results">Results</a>
+        <a href="#outreach" onClick={selectSideTab("outreach", "outreach")}>
+          Outreach queue
+        </a>
+        <a href="#memory" onClick={selectSideTab("memory", "memory")}>
+          Memory
+        </a>
+        <a href="#results" onClick={selectSideTab("results", "results")}>
+          Results
+        </a>
       </nav>
       <div className="panels">
         <section className="intro panel panel-wide" aria-label="About this tool">
@@ -359,20 +387,55 @@ export default function App() {
             <section id="memory" className="panel">
               <div className="panel-head">
                 <h2>Memory and results</h2>
-                <p className="panel-desc">Trust scores, the run report, and cold versus warm.</p>
+                <p className="panel-desc">Trust scores, the run report, cold versus warm, and rulings.</p>
               </div>
-              <MemoryResults
-                trust={trust}
-                trustState={trustState}
-                trustError={trustError}
-                cold={coldReport}
-                warm={warmReport}
-                report={settled ? report : null}
-                reportState={reportState}
-                reportError={reportError}
-                runId={settled ? runId : null}
-                running={running}
-              />
+              <SideTabList tab={sideTab} outreachCount={outreachCount(cards)} onChange={setSideTab} />
+              <div className="side-tab-scroll">
+                <div
+                  id="panel-memory"
+                  role="tabpanel"
+                  aria-labelledby="tab-memory"
+                  hidden={sideTab !== "memory"}
+                >
+                  <MemoryResults
+                    part="trust"
+                    trust={trust}
+                    trustState={trustState}
+                    trustError={trustError}
+                    cold={coldReport}
+                    warm={warmReport}
+                    report={settled ? report : null}
+                    reportState={reportState}
+                    reportError={reportError}
+                    runId={settled ? runId : null}
+                    running={running}
+                  />
+                </div>
+                <div id="results" role="tabpanel" aria-labelledby="tab-results" hidden={sideTab !== "results"}>
+                  <MemoryResults
+                    part="report"
+                    trust={trust}
+                    trustState={trustState}
+                    trustError={trustError}
+                    cold={coldReport}
+                    warm={warmReport}
+                    report={settled ? report : null}
+                    reportState={reportState}
+                    reportError={reportError}
+                    runId={settled ? runId : null}
+                    running={running}
+                  />
+                </div>
+                <div id="outreach" role="tabpanel" aria-labelledby="tab-outreach" hidden={sideTab !== "outreach"}>
+                  <OutreachQueue
+                    runId={runId}
+                    cards={cards}
+                    memoryIds={memoryIds}
+                    running={running}
+                    onSubmit={submitRuling}
+                  />
+                </div>
+              </div>
             </section>
           </aside>
           <section id="evidence" className="panel">
@@ -392,13 +455,6 @@ export default function App() {
               onSubmitRuling={(ruling) => submitRuling(ruling)}
             />
           </section>
-          <section id="outreach" className="panel">
-            <div className="panel-head">
-              <h2>Outreach queue</h2>
-              <p className="panel-desc">Rule on listings that need a human.</p>
-            </div>
-            <OutreachQueue runId={runId} cards={cards} memoryIds={memoryIds} running={running} onSubmit={submitRuling} />
-          </section>
         </div>
       </div>
       <ReceiptPanel
@@ -413,6 +469,16 @@ export default function App() {
       />
     </main>
   );
+}
+
+function scrollToId(id: string) {
+  const node = document.getElementById(id);
+  if (!node) return;
+  try {
+    node.scrollIntoView();
+  } catch {
+    // jsdom does not implement scrolling.
+  }
 }
 
 function badgeTitle(badge: Badge): string {

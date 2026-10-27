@@ -5,6 +5,17 @@ import { THRESHOLDS, type EvidenceCard, type Ruling } from "../types";
 import { ConfidenceMeter } from "./ConfidenceMeter";
 import { RulingForm } from "./OutreachQueue";
 
+const PAGE_SIZE = 8;
+
+type CardFilter = "all" | "analyst" | "applied" | "rejected";
+
+const FILTERS: { id: CardFilter; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "analyst", label: "Needs analyst" },
+  { id: "applied", label: "Applied" },
+  { id: "rejected", label: "Rejected" },
+];
+
 type Props = {
   cards: EvidenceCard[];
   runId: string | null;
@@ -29,6 +40,8 @@ export function EvidenceCards({
   onSubmitRuling,
 }: Props) {
   const [openKey, setOpenKey] = useState<string | null>(null);
+  const [filter, setFilter] = useState<CardFilter>("all");
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   if (loading) return <p className="loading-state">Loading evidence… Cards appear when the request finishes.</p>;
   if (error) {
     return (
@@ -49,25 +62,63 @@ export function EvidenceCards({
       <p className="empty-state">Choose a batch and press Start. Evidence cards load when the run finishes.</p>
     );
   }
+  const filtered = cards.filter((card) => matchesFilter(card, filter));
+  const visible = filtered.slice(0, visibleCount);
   return (
-    <div className="evidence-scroll card-list" role="region" aria-label="Evidence cards" tabIndex={0}>
-      {cards.map((card) => {
-        const key = `${card.listingId}:${card.field}`;
-        return (
-          <EvidenceCardView
-            key={key}
-            card={card}
-            runId={runId}
-            memoryId={memoryIds[`${card.listingId}:${card.field}`] ?? null}
-            expanded={openKey === key}
-            onToggle={() => setOpenKey((current) => (current === key ? null : key))}
-            onOpenReceipt={onOpenReceipt}
-            onSubmitRuling={onSubmitRuling}
-          />
-        );
-      })}
-    </div>
+    <>
+      <div className="filter-row" role="group" aria-label="Filter evidence">
+        {FILTERS.map((item) => {
+          const count = cards.filter((card) => matchesFilter(card, item.id)).length;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed={filter === item.id}
+              onClick={() => {
+                setFilter(item.id);
+                setVisibleCount(PAGE_SIZE);
+              }}
+            >
+              {item.label} <span className="count-pill">{count}</span>
+            </button>
+          );
+        })}
+      </div>
+      {visible.length === 0 ? (
+        <p className="empty-state">No cards in this filter.</p>
+      ) : (
+        <div className="evidence-scroll card-list" role="region" aria-label="Evidence cards" tabIndex={0}>
+          {visible.map((card) => {
+            const key = `${card.listingId}:${card.field}`;
+            return (
+              <EvidenceCardView
+                key={key}
+                card={card}
+                runId={runId}
+                memoryId={memoryIds[`${card.listingId}:${card.field}`] ?? null}
+                expanded={openKey === key}
+                onToggle={() => setOpenKey((current) => (current === key ? null : key))}
+                onOpenReceipt={onOpenReceipt}
+                onSubmitRuling={onSubmitRuling}
+              />
+            );
+          })}
+        </div>
+      )}
+      {visible.length < filtered.length ? (
+        <button type="button" className="show-more" onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}>
+          Show more
+        </button>
+      ) : null}
+    </>
   );
+}
+
+function matchesFilter(card: EvidenceCard, filter: CardFilter): boolean {
+  if (filter === "analyst") return isPossibleGhost(card);
+  if (filter === "applied") return card.status === "applied";
+  if (filter === "rejected") return card.critique?.verdict === "reject";
+  return true;
 }
 
 export function EvidenceCardView({

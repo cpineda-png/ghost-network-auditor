@@ -147,6 +147,8 @@ describe("demo path", () => {
 
     await user.click(screen.getByRole("button", { name: "Start" }));
     expect((await screen.findAllByText("Possible ghost, needs analyst")).length).toBeGreaterThan(0);
+    await user.click(screen.getByRole("tab", { name: /Outreach/ }));
+    await user.click(screen.getByRole("button", { name: /Hollow Oak Counseling/ }));
     const roster = await screen.findAllByRole("radio", { name: /roster: terminated/ });
     await user.click(roster[0]);
     const submits = screen.getAllByRole("button", { name: "Submit ruling" });
@@ -166,6 +168,7 @@ describe("demo path", () => {
     expect(screen.getAllByRole("button", { name: "Submit ruling" }).every((button) => button.hasAttribute("disabled"))).toBe(
       true,
     );
+    await user.click(screen.getByRole("tab", { name: "Memory" }));
     expect(await screen.findByRole("cell", { name: "1.00" })).toBeInTheDocument();
     expect(screen.getByRole("cell", { name: "roster" })).toBeInTheDocument();
   });

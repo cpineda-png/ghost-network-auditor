@@ -78,4 +78,41 @@ describe("evidence card", () => {
     expect(screen.getByText("Phone differs from the directory.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Hide evidence" })).toHaveAttribute("aria-expanded", "true");
   });
+
+  it("filters cards and reveals them eight at a time", async () => {
+    const user = userEvent.setup();
+    const many = Array.from({ length: 9 }, (_, index) => ({
+      ...card,
+      listingId: `listing:plan:L-${index}`,
+      field: "phone" as const,
+      status: index === 0 ? ("applied" as const) : card.status,
+      critique: index === 1 ? { verdict: "reject" as const, reasons: ["Conflict remains."] } : null,
+    }));
+    many[2] = { ...many[2]!, field: "status", status: "escalated" };
+    render(
+      <EvidenceCards
+        cards={many}
+        runId="run-cold"
+        loading={false}
+        error={null}
+        settled
+        memoryIds={{}}
+        onOpenReceipt={() => undefined}
+        onSubmitRuling={async () => "mem-1"}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "All 9" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Needs analyst 1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Applied 1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Rejected 1" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Show evidence" })).toHaveLength(8);
+
+    await user.click(screen.getByRole("button", { name: "Show more" }));
+    expect(screen.getAllByRole("button", { name: "Show evidence" })).toHaveLength(9);
+
+    await user.click(screen.getByRole("button", { name: "Rejected 1" }));
+    expect(screen.getAllByRole("button", { name: "Show evidence" })).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Rejected 1" })).toHaveAttribute("aria-pressed", "true");
+  });
 });
