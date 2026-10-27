@@ -3,6 +3,8 @@ import { listingName } from "../fixtures";
 import { formatValue, isPossibleGhost, needsHuman, typedRulingValue } from "../format";
 import { rulingSchema, type EvidenceCard, type Ruling, type Source } from "../types";
 
+const QUEUE_LIMIT = 5;
+
 type Props = {
   runId: string | null;
   cards: EvidenceCard[];
@@ -11,7 +13,13 @@ type Props = {
   onSubmit: (ruling: Ruling) => Promise<string>;
 };
 
+export function outreachCount(cards: EvidenceCard[]): number {
+  return cards.filter((card) => card.status === "escalated").length;
+}
+
 export function OutreachQueue({ runId, cards, memoryIds, running = false, onSubmit }: Props) {
+  const [showAll, setShowAll] = useState(false);
+  const [openKey, setOpenKey] = useState<string | null>(null);
   const queue = cards.filter((card) => card.status === "escalated");
   if (queue.length === 0) {
     if (running) {
@@ -28,20 +36,73 @@ export function OutreachQueue({ runId, cards, memoryIds, running = false, onSubm
     }
     return <p className="empty-state">No escalations in this run.</p>;
   }
+  const visible = showAll || queue.length <= QUEUE_LIMIT ? queue : queue.slice(0, QUEUE_LIMIT);
   return (
-    <div className="card-list">
-      {queue.map((card) => (
-        <RulingForm
-          key={`${card.listingId}:${card.field}`}
-          formId="queue"
-          runId={runId}
-          card={card}
-          memoryId={memoryIds[`${card.listingId}:${card.field}`] ?? null}
-          onSubmit={onSubmit}
-        />
-      ))}
+    <div className="outreach-list">
+      {visible.map((card) => {
+        const key = `${card.listingId}:${card.field}`;
+        const expanded = openKey === key;
+        const detailsId = outreachDetailsId(card);
+        const change = proposedChange(card);
+        return (
+          <div key={key} className="outreach-item">
+            <button
+              type="button"
+              className="outreach-row"
+              aria-expanded={expanded}
+              aria-controls={detailsId}
+              onClick={() => setOpenKey((current) => (current === key ? null : key))}
+            >
+              <span className="outreach-name">{listingName(card.listingId)}</span>{" "}
+              <span className="outreach-field">{card.field}</span>{" "}
+              <span className="outreach-change cell-ellipsis" title={change}>
+                {change}
+              </span>{" "}
+              <span className={`status status-${statusKind(card.status)}`}>{statusLabel(card.status)}</span>
+            </button>
+            <div id={detailsId} hidden={!expanded}>
+              {expanded ? (
+                <RulingForm
+                  formId="queue"
+                  runId={runId ?? ""}
+                  card={card}
+                  memoryId={memoryIds[key] ?? null}
+                  showHeading={false}
+                  onSubmit={onSubmit}
+                />
+              ) : null}
+            </div>
+          </div>
+        );
+      })}
+      {queue.length > QUEUE_LIMIT ? (
+        <button type="button" className="show-more" aria-pressed={showAll} onClick={() => setShowAll((current) => !current)}>
+          {showAll ? "Show first 5" : `Show all ${queue.length}`}
+        </button>
+      ) : null}
     </div>
   );
+}
+
+function proposedChange(card: EvidenceCard): string {
+  const directory = card.sources.find((source) => source.source === "directory");
+  const current = directory ? formatValue(directory.value) : "none";
+  const next = card.winner ? formatValue(card.winner.value) : "none";
+  return `${current} → ${next}`;
+}
+
+function outreachDetailsId(card: EvidenceCard): string {
+  return `outreach-details-${card.listingId}-${card.field}`.replace(/[^A-Za-z0-9_-]/g, "-");
+}
+
+function statusKind(status: string): string {
+  if (status === "applied" || status === "escalated" || status === "unchanged") return status;
+  return "neutral";
+}
+
+function statusLabel(status: string): string {
+  if (status.length === 0) return status;
+  return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
 export function buildRuling(draft: {

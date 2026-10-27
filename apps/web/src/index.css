@@ -377,13 +377,11 @@ a {
 
 .work-side {
   grid-column: 2;
-  grid-row: 1 / span 3;
+  grid-row: 1 / span 2;
   position: sticky;
   top: var(--space-4);
   align-self: start;
-  max-height: calc(100vh - var(--space-6));
   min-width: 0;
-  overflow: auto;
 }
 
 .work-side th,
@@ -400,9 +398,29 @@ a {
   grid-row: 2;
 }
 
-#outreach {
-  grid-column: 1;
-  grid-row: 3;
+.side-tablist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+
+.side-tab {
+  flex: 1 1 auto;
+  background: transparent;
+}
+
+.side-tab[aria-selected="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.side-tab-scroll {
+  max-height: 70vh;
+  min-width: 0;
+  overflow: auto;
 }
 
 .panel {
@@ -871,10 +889,68 @@ fieldset:disabled {
   line-height: 1.4;
 }
 
-.card-list {
+.card-list,
+.outreach-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+
+.outreach-list {
+  gap: var(--space-2);
+}
+
+.outreach-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.outreach-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  padding: 6px 8px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font-size: var(--text-xs);
+}
+
+.outreach-row:hover {
+  background: var(--table-hover);
+}
+
+.outreach-name,
+.outreach-change {
+  flex: 1 1 6rem;
+  min-width: 0;
+}
+
+.outreach-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.outreach-field {
+  flex: none;
+  color: var(--ink-muted);
+}
+
+.outreach-row .status {
+  flex: none;
+}
+
+.outreach-item .outreach-form {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .evidence-scroll {
@@ -1506,9 +1582,7 @@ dialog.receipt-panel[open] {
 
   .work-side {
     position: static;
-    max-height: none;
-    overflow: visible;
-    order: 2;
+    order: 3;
   }
 
   #timeline {
@@ -1516,11 +1590,7 @@ dialog.receipt-panel[open] {
   }
 
   #evidence {
-    order: 3;
-  }
-
-  #outreach {
-    order: 4;
+    order: 2;
   }
 
   .source-head {
