@@ -296,7 +296,7 @@ export default function App() {
         <section id="live-run" className="panel panel-wide">
           <div className="panel-head">
             <h2>Live run</h2>
-            <p className="panel-desc">Each actor reports here while the run is in progress.</p>
+            <p className="panel-desc">Events from each actor, in the order they arrive.</p>
           </div>
           {liveError ? (
             <div className="error-banner" role="alert">
@@ -306,7 +306,7 @@ export default function App() {
               </p>
             </div>
           ) : null}
-          <LiveRun events={events} report={report} settled={settled} running={running && !starting} />
+          <LiveRun events={events} report={report} settled={settled} running={running} />
         </section>
         <section id="evidence" className="panel">
           <div className="panel-head">

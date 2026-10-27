@@ -100,7 +100,9 @@ export function LiveRun({ events, report, settled, running }: Props) {
                   <span className="count-pill">{rows.length}</span>
                 </div>
                 {rows.length === 0 ? (
-                  <p className="empty-state">Waiting for this actor.</p>
+                  <p className="empty-state">
+                    {running ? "Waiting for this actor." : "No events from this actor."}
+                  </p>
                 ) : (
                   <ol className="timeline">
                     {rows.map((event) => (
