@@ -37,6 +37,7 @@ export async function arbitrate(input: {
   claims: Claim[];
   retriesUsed: number;
   useMemory: boolean;
+  groupName?: string;
   hmem: MeterlessHMem;
   world: GnaWorldModel;
   llm: LlmClient;
@@ -49,7 +50,8 @@ export async function arbitrate(input: {
     ? await input.hmem.recall({
         listingId: sample.listingId,
         field: sample.field,
-        specialty: input.claims.map((claim) => String(claim.value ?? "")).join(" "),
+        groupName: input.groupName,
+        values: input.claims.map((claim) => String(claim.value ?? "")),
       })
     : [];
   const trust = input.useMemory ? await input.hmem.trust() : [];
@@ -72,12 +74,18 @@ export async function arbitrate(input: {
             "receiptIds: array of strings. Must have at least one id, and must come only from the claims given.",
             "Cite receipt ids for ghost evidence, including a terminated roster and a listing with no claims in the window.",
             "memoryIds: array of strings. Cite memory ids when a ruling drives the choice.",
+            "When a memory shows an analyst chose source X over source Y for the same group and the same rejected value, follow that choice and cite those memory ids.",
             'Example: {"proposalId":"p1","listingId":"L-00001","field":"phone","proposedValue":"718-555-0100","winningSource":"roster","confidence":0.85,"rationale":"Roster matches the listing.","receiptIds":["receipt-1"],"memoryIds":[]}.',
           ].join(" "),
         },
         {
           role: "user",
-          content: JSON.stringify({ claims: input.claims, memories: hits, trust }),
+          content: JSON.stringify({
+            claims: input.claims,
+            groupName: input.groupName ?? "",
+            memories: hits,
+            trust,
+          }),
         },
       ],
       arbiterOutputSchema,
