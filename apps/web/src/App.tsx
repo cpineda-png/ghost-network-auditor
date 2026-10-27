@@ -21,12 +21,14 @@ import { MemoryResults } from "./components/MemoryResults";
 import { OutreachQueue } from "./components/OutreachQueue";
 import { ReceiptPanel } from "./components/ReceiptPanel";
 import { RunLauncher } from "./components/RunLauncher";
+import { useTheme } from "./theme";
 import type { EvidenceCard, Receipt, RunRequest, Ruling, TrustRow, WmEvent } from "./types";
 
 type Badge = "LIVE" | "REPLAY" | "UNKNOWN";
 type LoadState = "idle" | "loading" | "ready" | "error";
 
 export default function App() {
+  const { theme, toggleTheme } = useTheme();
   const [badge, setBadge] = useState<Badge>("UNKNOWN");
   const [healthState, setHealthState] = useState<LoadState>("loading");
   const [healthError, setHealthError] = useState<string | null>(null);
@@ -238,66 +240,166 @@ export default function App() {
 
   return (
     <main>
-      <header>
-        <h1>Ghost Network Auditor</h1>
-        {healthState === "loading" ? (
-          <p>Checking agents…</p>
-        ) : (
-          <span className={`badge badge-${badge.toLowerCase()}`}>{badge}</span>
-        )}
+      <a className="skip-link" href="#launcher">
+        Skip to run launcher
+      </a>
+      <header className="app-header">
+        <div className="brand">
+          <div className="brand-title">
+            <svg className="logo" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false">
+              <path
+                d="M7 8.5H21L14 16.5Z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M14 16.5L20.5 21"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                opacity="0.35"
+              />
+              <circle cx="7" cy="8.5" r="2.5" />
+              <circle cx="21" cy="8.5" r="2.5" />
+              <circle cx="14" cy="16.5" r="2.5" />
+              <circle cx="20.5" cy="21" r="2.3" opacity="0.35" />
+            </svg>
+            <h1>Ghost Network Auditor</h1>
+          </div>
+          <p className="tagline">Audit provider listings against claims, rosters, and prior rulings.</p>
+          <ul className="legend" aria-label="Status meanings">
+            <li>
+              <span className="status status-applied">Applied</span>
+            </li>
+            <li>
+              <span className="status status-escalated">Escalated</span>
+            </li>
+            <li>
+              <span className="status status-unchanged">Unchanged</span>
+            </li>
+            <li>
+              <span className="status status-human">Needs a human</span>
+            </li>
+          </ul>
+        </div>
+        <div className="header-meta">
+          <button
+            type="button"
+            className="theme-toggle"
+            aria-pressed={theme === "dark"}
+            title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+            onClick={toggleTheme}
+          >
+            {theme === "dark" ? "Dark" : "Light"}
+          </button>
+          {healthState === "loading" ? (
+            <p className="header-note">Checking agents…</p>
+          ) : (
+            <span className={`badge badge-${badge.toLowerCase()}`} title={badgeTitle(badge)}>
+              {badge}
+            </span>
+          )}
+        </div>
       </header>
-      {healthError ? <p role="alert">{healthError}</p> : null}
-      <nav aria-label="Sections">
+      {healthError ? (
+        <div className="error-banner" role="alert">
+          <p className="error-title">{healthError}</p>
+          <p className="error-hint">Agents are unreachable. Check that the agents service is running, then reload this page.</p>
+        </div>
+      ) : null}
+      <nav className="section-nav" aria-label="Sections">
         <a href="#launcher">Run launcher</a>
-        <a href="#live-run">Live run</a>
-        <a href="#evidence">Evidence card</a>
+        <a href="#timeline">Timeline</a>
+        <a href="#evidence">Evidence</a>
         <a href="#outreach">Outreach queue</a>
-        <a href="#memory">Memory and results</a>
+        <a href="#memory">Memory</a>
+        <a href="#results">Results</a>
       </nav>
       <div className="panels">
+        <section className="intro panel panel-wide" aria-label="About this tool">
+          <p>Ghost Network Auditor checks provider listings against claims, rosters, and prior rulings.</p>
+          <p>Each finding keeps its sources, its confidence, and the receipt that supports it.</p>
+          <p className="intro-cta">Choose a batch and press Start.</p>
+        </section>
         <section id="launcher" className="panel panel-wide">
-          <h2>Run launcher</h2>
+          <div className="panel-head">
+            <h2>Run launcher</h2>
+            <p className="panel-desc">Choose a batch and press Start.</p>
+          </div>
           <RunLauncher running={running} onStart={start} />
-          {starting ? <p>Starting run…</p> : null}
-          {runId ? <p>Run {runId}</p> : null}
-          {launcherError ? <p role="alert">{launcherError}</p> : null}
+          {starting ? <p className="loading-line">Starting run…</p> : null}
+          {runId ? <p className="run-id mono">Run {runId}</p> : null}
+          {launcherError ? (
+            <div className="error-banner" role="alert">
+              <p className="error-title">{launcherError}</p>
+              <p className="error-hint">The run did not start. Check the agents service, then press Start again.</p>
+            </div>
+          ) : null}
         </section>
-        <section id="live-run" className="panel panel-wide">
-          <h2>Live run</h2>
-          {liveError ? <p role="alert">{liveError}</p> : null}
-          <LiveRun events={events} report={report} settled={settled} running={running && !starting} />
-        </section>
-        <section id="evidence" className="panel">
-          <h2>Evidence card</h2>
-          <EvidenceCards
-            cards={cards}
-            runId={runId}
-            loading={cardsState === "loading"}
-            error={cardsError}
-            settled={settled}
-            memoryIds={memoryIds}
-            onOpenReceipt={openReceipt}
-            onSubmitRuling={(ruling) => submitRuling(ruling)}
-          />
-        </section>
-        <section id="outreach" className="panel">
-          <h2>Outreach queue</h2>
-          <OutreachQueue runId={runId} cards={cards} memoryIds={memoryIds} onSubmit={submitRuling} />
-        </section>
-        <section id="memory" className="panel">
-          <h2>Memory and results</h2>
-          <MemoryResults
-            trust={trust}
-            trustState={trustState}
-            trustError={trustError}
-            cold={coldReport}
-            warm={warmReport}
-            report={settled ? report : null}
-            reportState={reportState}
-            reportError={reportError}
-            runId={settled ? runId : null}
-          />
-        </section>
+        <div className="workbench">
+          <section id="timeline" className="panel">
+            <div className="panel-head">
+              <h2>Live run</h2>
+              <p className="panel-desc">Events from each actor, in the order they arrive.</p>
+            </div>
+            {liveError ? (
+              <div className="error-banner" role="alert">
+                <p className="error-title">{liveError}</p>
+                <p className="error-hint">
+                  Check that the agents service is running and can reach the gateway, then press Start again.
+                </p>
+              </div>
+            ) : null}
+            <LiveRun events={events} report={report} settled={settled} running={running} />
+          </section>
+          <aside className="work-side">
+            <section id="memory" className="panel">
+              <div className="panel-head">
+                <h2>Memory and results</h2>
+                <p className="panel-desc">Trust scores, the run report, and cold versus warm.</p>
+              </div>
+              <MemoryResults
+                trust={trust}
+                trustState={trustState}
+                trustError={trustError}
+                cold={coldReport}
+                warm={warmReport}
+                report={settled ? report : null}
+                reportState={reportState}
+                reportError={reportError}
+                runId={settled ? runId : null}
+                running={running}
+              />
+            </section>
+          </aside>
+          <section id="evidence" className="panel">
+            <div className="panel-head">
+              <h2>Evidence card</h2>
+              <p className="panel-desc">Sources, confidence, and the critic verdict for each field.</p>
+            </div>
+            <EvidenceCards
+              cards={cards}
+              runId={runId}
+              loading={cardsState === "loading"}
+              error={cardsError}
+              settled={settled}
+              running={running}
+              memoryIds={memoryIds}
+              onOpenReceipt={openReceipt}
+              onSubmitRuling={(ruling) => submitRuling(ruling)}
+            />
+          </section>
+          <section id="outreach" className="panel">
+            <div className="panel-head">
+              <h2>Outreach queue</h2>
+              <p className="panel-desc">Rule on listings that need a human.</p>
+            </div>
+            <OutreachQueue runId={runId} cards={cards} memoryIds={memoryIds} running={running} onSubmit={submitRuling} />
+          </section>
+        </div>
       </div>
       <ReceiptPanel
         receipt={receipt}
@@ -311,4 +413,10 @@ export default function App() {
       />
     </main>
   );
+}
+
+function badgeTitle(badge: Badge): string {
+  if (badge === "LIVE") return "Models are called live";
+  if (badge === "REPLAY") return "Models are replayed from stored responses";
+  return "Agents health has not been confirmed";
 }
