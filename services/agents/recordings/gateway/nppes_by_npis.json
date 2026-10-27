@@ -1,0 +1,265 @@
+{
+  "receipt": {
+    "receiptId": "rcpt_29fbdd3e3895dc58",
+    "runId": "4db48861-1c28-44ce-ad15-2d3a0a3ba3b2",
+    "templateId": "nppes_by_npis",
+    "sql": "SNAPSHOT nppes WHERE number IN ('8000000900', '8000000918', '8000000926', '8000000934', '8000000942', '8000000959', '8000000967', '8000000975', '8000000983', '8000000991')",
+    "params": {
+      "npis": [
+        "8000000900",
+        "8000000918",
+        "8000000926",
+        "8000000934",
+        "8000000942",
+        "8000000959",
+        "8000000967",
+        "8000000975",
+        "8000000983",
+        "8000000991"
+      ]
+    },
+    "sources": [
+      "nppes_snapshot"
+    ],
+    "rowCount": 10,
+    "rowsHash": "f0ef4b4abbad4f04a9e840bc07a8372429d070b9733f35955e7df92ac40daec6",
+    "rowsPreview": [
+      {
+        "npi": "8000000900",
+        "enumeration_type": "NPI-2",
+        "name": "VALE WEST CLINIC",
+        "taxonomy_code": "261QM0801X",
+        "taxonomy_desc": "Clinic/Center, Mental Health",
+        "location_address_1": "190 Harbor Sample Ave",
+        "location_zip": "11218",
+        "location_phone": "718-555-0190",
+        "mailing_address_1": "190 Harbor Sample Ave"
+      },
+      {
+        "npi": "8000000918",
+        "enumeration_type": "NPI-1",
+        "name": "MARLOW FINCH",
+        "taxonomy_code": "101YM0800X",
+        "taxonomy_desc": "Counselor, Mental Health",
+        "location_address_1": "191 Harbor Sample Ave",
+        "location_zip": "11219",
+        "location_phone": "718-555-0191",
+        "mailing_address_1": "191 Harbor Sample Ave"
+      },
+      {
+        "npi": "8000000926",
+        "enumeration_type": "NPI-1",
+        "name": "NOLAN FINCH",
+        "taxonomy_code": "2084P0800X",
+        "taxonomy_desc": "Psychiatry",
+        "location_address_1": "192 Harbor Sample Ave",
+        "location_zip": "11220",
+        "location_phone": "718-555-0192",
+        "mailing_address_1": "492 Mailbox Sample Rd"
+      },
+      {
+        "npi": "8000000934",
+        "enumeration_type": "NPI-1",
+        "name": "PARKER FINCH",
+        "taxonomy_code": "103T00000X",
+        "taxonomy_desc": "Psychologist",
+        "location_address_1": "193 Harbor Sample Ave",
+        "location_zip": "11221",
+        "location_phone": "718-555-0193",
+        "mailing_address_1": "193 Harbor Sample Ave"
+      },
+      {
+        "npi": "8000000942",
+        "enumeration_type": "NPI-1",
+        "name": "QUINN FINCH",
+        "taxonomy_code": "363LP0808X",
+        "taxonomy_desc": "Nurse Practitioner, Psychiatric/Mental Health",
+        "location_address_1": "194 Harbor Sample Ave",
+        "location_zip": "11222",
+        "location_phone": "718-555-0194",
+        "mailing_address_1": "494 Mailbox Sample Rd"
+      },
+      {
+        "npi": "8000000959",
+        "enumeration_type": "NPI-1",
+        "name": "REESE FINCH",
+        "taxonomy_code": "101YM0800X",
+        "taxonomy_desc": "Counselor, Mental Health",
+        "location_address_1": "195 Harbor Sample Ave",
+        "location_zip": "11223",
+        "location_phone": "718-555-0195",
+        "mailing_address_1": "495 Mailbox Sample Rd"
+      },
+      {
+        "npi": "8000000967",
+        "enumeration_type": "NPI-1",
+        "name": "SAWYER FINCH",
+        "taxonomy_code": "2084P0800X",
+        "taxonomy_desc": "Psychiatry",
+        "location_address_1": "196 Harbor Sample Ave",
+        "location_zip": "11224",
+        "location_phone": "718-555-0196",
+        "mailing_address_1": "196 Harbor Sample Ave"
+      },
+      {
+        "npi": "8000000975",
+        "enumeration_type": "NPI-1",
+        "name": "TAYLOR FINCH",
+        "taxonomy_code": "103T00000X",
+        "taxonomy_desc": "Psychologist",
+        "location_address_1": "197 Harbor Sample Ave",
+        "location_zip": "11225",
+        "location_phone": "718-555-0197",
+        "mailing_address_1": "197 Harbor Sample Ave"
+      },
+      {
+        "npi": "8000000983",
+        "enumeration_type": "NPI-1",
+        "name": "WINTER FINCH",
+        "taxonomy_code": "363LP0808X",
+        "taxonomy_desc": "Nurse Practitioner, Psychiatric/Mental Health",
+        "location_address_1": "198 Harbor Sample Ave",
+        "location_zip": "11226",
+        "location_phone": "718-555-0198",
+        "mailing_address_1": "498 Mailbox Sample Rd"
+      },
+      {
+        "npi": "8000000991",
+        "enumeration_type": "NPI-2",
+        "name": "FINCH OAK PRACTICE",
+        "taxonomy_code": "251S00000X",
+        "taxonomy_desc": "Community/Behavioral Health Agency",
+        "location_address_1": "199 Harbor Sample Ave",
+        "location_zip": "11228",
+        "location_phone": "718-555-0199",
+        "mailing_address_1": "499 Mailbox Sample Rd"
+      }
+    ],
+    "executedAt": "2026-10-27T01:35:21.381669816Z",
+    "mode": "live",
+    "durationMs": 0
+  },
+  "columns": [
+    "npi",
+    "enumeration_type",
+    "name",
+    "taxonomy_code",
+    "taxonomy_desc",
+    "location_address_1",
+    "location_zip",
+    "location_phone",
+    "mailing_address_1"
+  ],
+  "rows": [
+    {
+      "npi": "8000000900",
+      "enumeration_type": "NPI-2",
+      "name": "VALE WEST CLINIC",
+      "taxonomy_code": "261QM0801X",
+      "taxonomy_desc": "Clinic/Center, Mental Health",
+      "location_address_1": "190 Harbor Sample Ave",
+      "location_zip": "11218",
+      "location_phone": "718-555-0190",
+      "mailing_address_1": "190 Harbor Sample Ave"
+    },
+    {
+      "npi": "8000000918",
+      "enumeration_type": "NPI-1",
+      "name": "MARLOW FINCH",
+      "taxonomy_code": "101YM0800X",
+      "taxonomy_desc": "Counselor, Mental Health",
+      "location_address_1": "191 Harbor Sample Ave",
+      "location_zip": "11219",
+      "location_phone": "718-555-0191",
+      "mailing_address_1": "191 Harbor Sample Ave"
+    },
+    {
+      "npi": "8000000926",
+      "enumeration_type": "NPI-1",
+      "name": "NOLAN FINCH",
+      "taxonomy_code": "2084P0800X",
+      "taxonomy_desc": "Psychiatry",
+      "location_address_1": "192 Harbor Sample Ave",
+      "location_zip": "11220",
+      "location_phone": "718-555-0192",
+      "mailing_address_1": "492 Mailbox Sample Rd"
+    },
+    {
+      "npi": "8000000934",
+      "enumeration_type": "NPI-1",
+      "name": "PARKER FINCH",
+      "taxonomy_code": "103T00000X",
+      "taxonomy_desc": "Psychologist",
+      "location_address_1": "193 Harbor Sample Ave",
+      "location_zip": "11221",
+      "location_phone": "718-555-0193",
+      "mailing_address_1": "193 Harbor Sample Ave"
+    },
+    {
+      "npi": "8000000942",
+      "enumeration_type": "NPI-1",
+      "name": "QUINN FINCH",
+      "taxonomy_code": "363LP0808X",
+      "taxonomy_desc": "Nurse Practitioner, Psychiatric/Mental Health",
+      "location_address_1": "194 Harbor Sample Ave",
+      "location_zip": "11222",
+      "location_phone": "718-555-0194",
+      "mailing_address_1": "494 Mailbox Sample Rd"
+    },
+    {
+      "npi": "8000000959",
+      "enumeration_type": "NPI-1",
+      "name": "REESE FINCH",
+      "taxonomy_code": "101YM0800X",
+      "taxonomy_desc": "Counselor, Mental Health",
+      "location_address_1": "195 Harbor Sample Ave",
+      "location_zip": "11223",
+      "location_phone": "718-555-0195",
+      "mailing_address_1": "495 Mailbox Sample Rd"
+    },
+    {
+      "npi": "8000000967",
+      "enumeration_type": "NPI-1",
+      "name": "SAWYER FINCH",
+      "taxonomy_code": "2084P0800X",
+      "taxonomy_desc": "Psychiatry",
+      "location_address_1": "196 Harbor Sample Ave",
+      "location_zip": "11224",
+      "location_phone": "718-555-0196",
+      "mailing_address_1": "196 Harbor Sample Ave"
+    },
+    {
+      "npi": "8000000975",
+      "enumeration_type": "NPI-1",
+      "name": "TAYLOR FINCH",
+      "taxonomy_code": "103T00000X",
+      "taxonomy_desc": "Psychologist",
+      "location_address_1": "197 Harbor Sample Ave",
+      "location_zip": "11225",
+      "location_phone": "718-555-0197",
+      "mailing_address_1": "197 Harbor Sample Ave"
+    },
+    {
+      "npi": "8000000983",
+      "enumeration_type": "NPI-1",
+      "name": "WINTER FINCH",
+      "taxonomy_code": "363LP0808X",
+      "taxonomy_desc": "Nurse Practitioner, Psychiatric/Mental Health",
+      "location_address_1": "198 Harbor Sample Ave",
+      "location_zip": "11226",
+      "location_phone": "718-555-0198",
+      "mailing_address_1": "498 Mailbox Sample Rd"
+    },
+    {
+      "npi": "8000000991",
+      "enumeration_type": "NPI-2",
+      "name": "FINCH OAK PRACTICE",
+      "taxonomy_code": "251S00000X",
+      "taxonomy_desc": "Community/Behavioral Health Agency",
+      "location_address_1": "199 Harbor Sample Ave",
+      "location_zip": "11228",
+      "location_phone": "718-555-0199",
+      "mailing_address_1": "499 Mailbox Sample Rd"
+    }
+  ]
+}
